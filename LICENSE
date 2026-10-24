@@ -1,0 +1,15 @@
+Copyright (c) 2026 naka22-dev. Todos los derechos reservados.
+
+Forja de Cartas es una herramienta de uso personal. El código y el diseño de esta app
+(index.html, sw.js, manifest.webmanifest y la carpeta iconos) se publican aquí solo para
+poder instalarla. No se concede ninguna licencia: no se permite copiar, modificar,
+redistribuir, publicar en otro sitio ni comercializar esta app, total o parcialmente,
+sin permiso por escrito del autor.
+
+Herramienta no oficial para juegos de rol compatibles con la 5.ª edición. Dungeons & Dragons
+y D&D son marcas de Wizards of the Coast; esta app no está afiliada a Wizards of the Coast
+ni respaldada por ella.
+
+La app carga desde cdnjs dos librerías de terceros con licencia MIT, que no forman parte de
+esta obra: jsPDF (https://github.com/parallax/jsPDF) y html2canvas
+(https://github.com/niklasvh/html2canvas).

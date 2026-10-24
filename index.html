@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forja de Cartas</title>
+<meta name="theme-color" content="#78352d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="iconos/icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="iconos/icono-180.png">
+<style>
+:root{--bg:#f6f1e7;--card:#fffdf8;--ink:#292725;--mut:#625e58;--acc:#78352d;--line:#cfc7ba;--warn:#9a5b00;--warnbg:#fbf0dc}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1b19;--card:#262320;--ink:#ece6da;--mut:#a9a296;--acc:#d98a7c;--line:#4a443d;--warn:#e0b060;--warnbg:#3a3020}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:20px;color:var(--acc)}header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+main{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;padding:16px 20px;align-items:start}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+/* toda la columna derecha queda fija al bajar y, si no cabe en pantalla, se desplaza por dentro (así nada se solapa) */
+aside{display:flex;flex-direction:column;gap:16px;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain}
+@media (max-width:900px){aside{position:static;max-height:none;overflow:visible}}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+h2{margin:0 0 10px;font-size:16px;color:var(--acc)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.on,button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.sm{padding:2px 8px;font-size:13px}
+form{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);grid-column:span 3}
+label.x{grid-column:span 1}label.a{grid-column:span 6}label.w{grid-column:span 6}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:5px 7px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.bar{grid-column:span 6;display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
+li .t{font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--mut)}
+li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hint{font-size:13px;color:var(--mut)}code{background:var(--bg);padding:1px 5px;border-radius:4px;word-break:break-all}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+/* ---- Vista previa ---- */
+#pv{display:flex;justify-content:center;align-items:flex-start;padding:10px 0;overflow:hidden;background:repeating-conic-gradient(var(--bg) 0 25%,transparent 0 50%) 0 0/16px 16px;border-radius:8px}
+#pvinfo{font-size:13px;margin:8px 0 0}
+#pvinfo .w{display:block;margin-top:4px;padding:4px 8px;border-radius:5px;background:var(--warnbg);color:var(--warn)}
+.pvtabs{display:flex;gap:6px;margin-bottom:8px}
+#measure{position:absolute;left:-10000px;top:0;visibility:hidden}
+footer.aviso{padding:4px 20px 70px;color:var(--mut);font-size:11.5px;text-align:center}
+footer.aviso p{margin:4px auto;max-width:760px}
+/* Guía de formato */
+.guia{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+.guia summary{cursor:pointer;font-weight:600;color:var(--acc)}
+.guia h3{font-size:14px;margin:12px 0 4px;color:var(--acc)}
+.guia p{margin:4px 0}
+.guia table{border-collapse:collapse;width:100%}
+.guia th,.guia td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+.guia pre{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:6px 8px;white-space:pre-wrap;font-size:12px;margin:4px 0}
+.guia code{background:var(--card)}
+.guia .lista{list-style:disc;padding-left:18px}
+.guia .lista li{display:list-item;border:0;padding:2px 0}
+.guia .cl{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:3px}
+/* En el móvil la vista previa queda debajo del formulario: botón flotante para ir y volver */
+#gopv,#goform{display:none}
+@media (max-width:900px){
+  #gopv{display:block;position:fixed;right:14px;bottom:14px;z-index:5;background:var(--acc);color:#fff;border-color:var(--acc);border-radius:20px;padding:9px 16px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  #goform{display:inline-block}
+  main{padding:12px}
+}
+/* Tarjeta: medidas reales en mm y pt, como en el PDF */
+.card{position:relative;overflow:hidden;background:#FDF6E8;color:#292725;border:.7pt solid #292725;border-radius:2.5mm;font-family:Helvetica,Arial,"Liberation Sans",sans-serif;transform-origin:0 0;flex:none}
+.card .rb{position:absolute;left:3mm;right:3mm;height:.9mm}
+.card .nm,.card .sb{position:absolute;white-space:nowrap;line-height:1}
+.card .nm{font-family:"Times New Roman",Times,serif;font-weight:bold}
+.card .sb{font-style:italic}
+.card .hr{position:absolute;height:.6pt}
+.card .badge{position:absolute;border-radius:50%;color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center}
+.card .ct{position:absolute;column-fill:auto;column-gap:4mm;line-height:1.2;overflow:hidden}
+.card .ct p{margin:0}
+.card .band{background:#EBDDC0;margin:0 -1.4mm;padding:0 1.4mm;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.card .st{font-family:"Times New Roman",Times,serif;font-weight:bold;break-after:avoid;line-height:1}
+.card .ab{display:flex;justify-content:space-between;break-inside:avoid}
+.card .ab>div{position:relative}
+.card .ab span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.card table{border-collapse:collapse;width:100%;break-inside:avoid;line-height:1.15}
+.card th{font-weight:bold;text-align:left;vertical-align:top}
+.card td{vertical-align:top}
+.card .pie{position:absolute;font-style:italic;font-size:5pt;color:#625E58;white-space:nowrap}
+.back{position:relative;overflow:hidden;border-radius:2.5mm;color:#FDF6E8;font-family:"Times New Roman",Times,serif;font-weight:bold;flex:none;transform-origin:0 0}
+.back .fr{position:absolute;left:2mm;top:2mm;right:2mm;bottom:2mm;border:.9pt solid #FDF6E8;border-radius:1.8mm}
+.back .lb,.back .bn,.back .bs{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;line-height:1}
+.back .bs{font-family:Helvetica,Arial,sans-serif;font-weight:normal;font-style:italic}
+.back .ln{position:absolute;height:.5pt;background:#FDF6E8}
+.back svg,.back img{position:absolute}
+.back img{object-fit:cover;border:.9pt solid #FDF6E8}
+/* Impresión de una sola tarjeta desde el navegador */
+#printarea{display:none}
+@media print{
+  @page{size:A4;margin:10mm}
+  html,body{background:#fff!important}
+  body>*:not(#printarea){display:none!important}
+  #printarea{display:block}
+  #printarea>div{break-after:page;display:flex}
+  /* el reverso va en espejo (al lado contrario) para que, a doble cara con volteo por el borde largo, caiga detrás del frente */
+  #printarea>div.rev{justify-content:flex-end}
+  #printarea>div:last-child{break-after:auto}
+  .card,.back,.card *,.back *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>Forja de Cartas</h1>
+<p>Tarjetas para juegos de rol compatibles con la 5.ª edición (2024). Rellena una tarjeta, mira la vista previa y descárgala en PDF para imprimirla. <span id="ver"></span></p>
+</header>
+<main>
+<section>
+<h2 id="ftitle">Nueva tarjeta</h2>
+<details class="guia">
+<summary>📖 Cómo escribir los textos (negrita, cursiva, tablas…)</summary>
+<h3>Negrita y cursiva</h3>
+<p>Rodea el texto con asteriscos, sin espacios entre los asteriscos y el texto:</p>
+<table>
+<tr><th>Escribes</th><th>Sale</th><th>Para qué</th></tr>
+<tr><td><code>***Multiataque.***</code></td><td><b><i>Multiataque.</i></b></td><td>Nombres de acciones, rasgos y efectos</td></tr>
+<tr><td><code>**Daño**</code></td><td><b>Daño</b></td><td>Resaltar una palabra</td></tr>
+<tr><td><code>*bola de fuego*</code></td><td><i>bola de fuego</i></td><td>Conjuros, estados, «Impacto:»</td></tr>
+</table>
+<p>Ejemplo de acción completa:<br><code>***Garrote.*** *Tirada de ataque cuerpo a cuerpo:* +6, alcance 1,5 m. *Impacto:* 13 (2d8 + 4) de daño contundente.</code></p>
+<h3>Saltos de línea</h3>
+<p>En las casillas grandes, pulsa <b>Intro</b> para empezar una línea nueva (por ejemplo, una acción por línea). En «Datos en banda» (reglas), cada línea es un dato.</p>
+<h3>Tablas</h3>
+<p>Cada línea que empieza por <code>|</code> es una fila; las columnas se separan con <code>|</code>. La primera fila es la cabecera. Puede ir texto antes y después:</p>
+<pre>Tira 1d8 por cada objetivo:
+| 1d8 | Rayo | Efecto |
+| 1 | Rojo | 12d6 de fuego |
+| 2 | Naranja | 12d6 de ácido |
+Con éxito, la mitad del daño.</pre>
+<p>Dentro de las celdas también funcionan <code>**negrita**</code> y <code>*cursiva*</code>. Una fila como <code>|---|---|---|</code> se ignora, así que puedes pegar tablas copiadas de otro sitio.</p>
+<h3>Colores</h3>
+<p>Salen solos: los objetos según la <b>rareza</b> y los conjuros según la <b>escuela</b>. Para otro color, escribe en «Color» un código como <code>#2B7A78</code>. Los que usamos en las reglas de personaje:</p>
+<p><span class="cl" style="background:#78352D"></span><code>#78352D</code> clase · <span class="cl" style="background:#9A6B00"></span><code>#9A6B00</code> subclase · <span class="cl" style="background:#2B7A78"></span><code>#2B7A78</code> especie · <span class="cl" style="background:#6A3D9A"></span><code>#6A3D9A</code> dote</p>
+<h3>Otros trucos</h3>
+<ul class="lista">
+<li><b>Sintonización:</b> escribe <code>Sí</code>, o el requisito: <code>por un lanzador de conjuros</code>.</li>
+<li><b>Criaturas:</b> pon solo las puntuaciones (FUE, DES…): los modificadores se calculan solos. En «Salvaciones», solo las que tienen competencia: <code>Des +5, Sab +3</code>. Si dejas la iniciativa vacía, se calcula con la Destreza.</li>
+<li><b>Barajas</b> (como la Baraja de muchas cosas): pon el mismo «Texto del reverso», tipo y color en todas sus cartas, para que los reversos sean idénticos.</li>
+<li><b>Aviso naranja:</b> la tarjeta no cabe con la letra normal. Acorta el texto si la quieres en tamaño póker.</li>
+</ul>
+</details>
+<div class="tabs" id="tabs"></div>
+<form id="form" autocomplete="off"></form>
+</section>
+<aside>
+<section id="prevbox">
+<h2>Vista previa</h2>
+<div class="pvtabs"><button type="button" id="pvf" class="on">Frente</button><button type="button" id="pvb">Reverso</button><button type="button" id="goform" class="sm" style="margin-left:auto">↑ Volver al formulario</button></div>
+<div id="pv"></div>
+<p id="pvinfo"></p>
+<div class="row"><button type="button" id="dpdf" class="pri">Descargar PDF</button><button type="button" id="png">Descargar imagen PNG</button><button type="button" id="pdf">Imprimir</button></div>
+<label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="rv" checked style="width:auto"> Con reverso (en la segunda página del PDF)</label>
+<p class="hint">«Descargar PDF» guarda la tarjeta a tamaño real en una hoja A4. El reverso va en espejo, para imprimir a doble cara volteando por el borde largo. Imprímelo al 100 %, sin «ajustar a la página». La imagen PNG es de la cara que estás viendo, a 300 ppp.</p>
+<p class="hint">Si sale un aviso en naranja, la tarjeta no cabe con la letra normal: se reduce la letra (hasta 6 pt) o la tarjeta pasa a un tamaño mayor. Para que quede en tamaño póker, acorta el texto.</p>
+</section>
+<section>
+<h2>Mi mazo (<span id="count">0</span>)</h2>
+<ul id="deck"></ul>
+<p class="hint" id="empty">El mazo está vacío. Añade tu primera tarjeta.</p>
+<div class="row">
+<button class="pri" id="dl">Descargar CSV</button>
+<button id="imp">Importar CSV</button>
+<button id="clr">Vaciar mazo</button>
+<input type="file" id="file" accept=".csv,text/csv" hidden>
+</div>
+<!-- Ajustes fijos de la app (en el ordenador se eligen para el script): tamaño automático, letra 7 pt, mínima 6 pt -->
+<select id="sz" hidden><option value="" selected></option></select>
+<input id="fs" type="hidden" value="7"><input id="fm" type="hidden" value="6"><code id="cmd" hidden></code>
+<p class="hint">El mazo se guarda en este dispositivo, así que puedes cerrar la app y seguir otro día. Para pasar tarjetas al ordenador (o al revés), usa «Descargar CSV» en uno e «Importar CSV» en el otro.</p>
+</section>
+</aside>
+</main>
+<footer class="aviso">
+<p>© 2026 naka22-dev · Forja de Cartas. Uso personal. Todos los derechos reservados: no se permite copiar, redistribuir ni comercializar esta app sin permiso.</p>
+<p>Herramienta no oficial para juegos de rol compatibles con la 5.ª edición. Dungeons &amp; Dragons y D&amp;D son marcas de Wizards of the Coast; esta app no está afiliada a Wizards of the Coast ni respaldada por ella.</p>
+</footer>
+<div id="measure"></div>
+<button type="button" id="gopv">Vista previa ↓</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<div id="printarea"></div>
+<script>
+// Cada campo: "columna|Etiqueta|tipo|opciones". Tipos: t texto, x corto, a texto largo, s lista.
+const RAR="Común,Poco común,Raro,Muy raro,Legendario,Artefacto";
+const SCH="Abjuración,Conjuración,Adivinación,Encantamiento,Evocación,Ilusión,Nigromancia,Transmutación";
+const REV="nombre_reverso|Texto del reverso en lugar del nombre (opcional; ponlo igual en todas las cartas de una baraja para no delatarlas)|t";
+const IMG="imagen|Imagen del reverso (nombre del archivo, en la misma carpeta que el CSV)|t";
+const TYPES={
+criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
+objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
+conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
+regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]}
+};
+const def=k=>TYPES[k].f.map(s=>{const[a,b,c,d]=s.split("|");return{k:a,l:b,t:c,o:d?d.split(","):null}});
+let cur="criatura",edit=null,deck=[];
+const $=id=>document.getElementById(id);
+try{deck=JSON.parse(localStorage.getItem("dnd_mazo_v1")||"[]")}catch(e){deck=[]}
+const save=()=>{try{localStorage.setItem("dnd_mazo_v1",JSON.stringify(deck))}catch(e){}};
+
+function tabs(){$("tabs").innerHTML="";for(const k in TYPES){const b=document.createElement("button");b.textContent=TYPES[k].n;b.type="button";if(k===cur)b.className="on";b.onclick=()=>{cur=k;edit=null;form()};$("tabs").append(b)}}
+function form(data){
+  tabs();$("ftitle").textContent=edit===null?"Nueva tarjeta":"Editando: "+(deck[edit].d.nombre||"sin nombre");
+  const f=$("form");f.innerHTML="";data=data||{};
+  for(const x of def(cur)){
+    const l=document.createElement("label");l.className=x.t==="a"?"a":x.t==="x"?"x":"";l.append(x.l);
+    let i;
+    if(x.t==="a"){i=document.createElement("textarea")}
+    else if(x.t==="s"){i=document.createElement("select");i.append(new Option("—",""));for(const o of x.o){const[v,t]=o.includes(":")?o.split(":"):[o,o];i.append(new Option(t,v))}}
+    else{i=document.createElement("input")}
+    i.id="f_"+x.k;i.value=data[x.k]||"";l.append(i);f.append(l);
+  }
+  const bar=document.createElement("div");bar.className="bar";
+  const ok=document.createElement("button");ok.type="submit";ok.className="pri";ok.textContent=edit===null?"Añadir al mazo":"Guardar cambios";bar.append(ok);
+  if(edit!==null){const c=document.createElement("button");c.type="button";c.textContent="Cancelar";c.onclick=()=>{edit=null;form()};bar.append(c)}
+  f.append(bar);
+  preview();
+}
+const formData=()=>{const d={};for(const x of def(cur))d[x.k]=$("f_"+x.k).value.trim();return d};
+$("form").onsubmit=e=>{
+  e.preventDefault();const d=formData();
+  if(!d.nombre){alert("Escribe al menos el nombre de la tarjeta.");return}
+  if(edit===null)deck.push({t:cur,d});else deck[edit]={t:cur,d};
+  edit=null;save();list();form();window.scrollTo(0,0);
+};
+let pvTimer=null;
+$("form").addEventListener("input",()=>{clearTimeout(pvTimer);pvTimer=setTimeout(preview,150)});
+$("form").addEventListener("change",preview);
+function list(){
+  const u=$("deck");u.innerHTML="";$("count").textContent=deck.length;$("empty").hidden=deck.length>0;
+  deck.forEach((c,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML='<span class="t"></span><span class="n"></span>';
+    li.children[0].textContent=TYPES[c.t].n;li.children[1].textContent=c.d.nombre;
+    const mk=(t,fn)=>{const b=document.createElement("button");b.className="sm";b.textContent=t;b.onclick=fn;li.append(b)};
+    mk("Editar",()=>{cur=c.t;edit=i;form(c.d);window.scrollTo(0,0)});
+    mk("Copiar",()=>{deck.splice(i+1,0,{t:c.t,d:{...c.d}});save();list()});
+    mk("✕",()=>{if(confirm("¿Borrar «"+c.d.nombre+"»?")){deck.splice(i,1);if(edit===i)edit=null;save();list();form()}});
+    u.append(li);
+  });
+}
+// ---- CSV ----
+const esc=v=>/[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+$("dl").onclick=()=>{
+  if(!deck.length){alert("El mazo está vacío.");return}
+  const cols=["tarjeta"];
+  for(const k in TYPES)if(deck.some(c=>c.t===k))for(const x of def(k))if(!cols.includes(x.k))cols.push(x.k);
+  const out=[cols.join(";")];
+  for(const c of deck)out.push(cols.map(k=>esc(k==="tarjeta"?c.t:(c.d[k]||""))).join(";"));
+  saveFile("mazo.csv",new Blob(["﻿"+out.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"}));
+};
+// Guardar un archivo: en claude.ai (móvil o web) pasa por la capacidad "downloads", que pide confirmación;
+// abierto como archivo local, descarga directamente.
+const dlCap=window.claude&&typeof window.claude.use==="function"?window.claude.use("downloads").catch(()=>null):Promise.resolve(null);
+async function saveFile(filename,blob){
+  const dl=await dlCap;
+  if(dl){
+    try{await dl.save({filename,data:blob})}
+    catch(e){if(e&&e.code!=="declined")alert("No se ha podido guardar el archivo"+(e&&e.code==="rate_limited"?": espera un momento y vuelve a probar.":"."))}
+    return;
+  }
+  // iPhone con la app instalada: Safari no descarga enlaces; se usa el menú Compartir (Guardar en Archivos, Imprimir...)
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  if(ios&&navigator.canShare){
+    const file=new File([blob],filename,{type:blob.type||"application/octet-stream"});
+    if(navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:filename})}catch(e){}return}
+  }
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.append(a);a.click();a.remove();
+}
+function parseCSV(t){
+  const first=t.split(/\r?\n/)[0],dl=[";",",","\t"].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let r=[],f="",q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch==='"')q=true;else if(ch===dl){r.push(f);f=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;r.push(f);rows.push(r);r=[];f=""}
+    else f+=ch}
+  if(f||r.length){r.push(f);rows.push(r)}
+  return rows.filter(x=>x.some(v=>v.trim()));
+}
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  const buf=await file.arrayBuffer();let t;
+  try{t=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(_){t=new TextDecoder("windows-1252").decode(buf)}
+  const rows=parseCSV(t.replace(/^﻿/,""));if(rows.length<2){alert("El CSV no tiene datos.");return}
+  const h=rows[0].map(s=>s.trim().toLowerCase());let n=0;
+  for(const r of rows.slice(1)){
+    const o={};h.forEach((k,i)=>o[k]=(r[i]||"").replace(/\\n/g,"\n").trim());
+    let ty=(o.tarjeta||"").toLowerCase();
+    ty=ty.startsWith("obj")?"objeto":ty.startsWith("conj")||ty.startsWith("truc")?"conjuro":/^(reg|tal|dot|cond|rasg|gen|esp|tras)/.test(ty)?"regla":ty.startsWith("cri")||ty.startsWith("mon")||ty.startsWith("pnj")?"criatura":
+      ("puntos_golpe" in o||"fue" in o)?"criatura":("escuela" in o)?"conjuro":("requisito" in o||"seccion1_titulo" in o)?"regla":"objeto";
+    const d={};for(const x of def(ty))d[x.k]=o[x.k]||"";
+    if(d.nombre){deck.push({t:ty,d});n++}
+  }
+  e.target.value="";save();list();alert(n+" tarjetas importadas.");
+};
+$("clr").onclick=()=>{if(deck.length&&confirm("¿Vaciar todo el mazo?")){deck=[];edit=null;save();list();form()}};
+function cmd(){const f=parseFloat($("fs").value)||7;
+  $("cmd").textContent="python generar_tarjetas_DnD_2024_v15.py mazo.csv tarjetas.pdf"+($("sz").value?" "+$("sz").value:"")+" --letra "+f+" --letra-minima "+(parseFloat($("fm").value)||6)+($("rv").checked?" --reversos":"")}
+["sz","fs","fm","rv"].forEach(i=>{$(i).addEventListener("input",()=>{cmd();preview()});$(i).addEventListener("change",()=>{cmd();preview()})});
+
+// ===================================================================
+// Vista previa: reproduce el diseño de generar_tarjetas_DnD_2024_v15.py
+// (mismas medidas en mm y pt, mismos colores y la misma escalera de tamaños).
+// ===================================================================
+const INK="#292725",MUTED="#625E58",ACCENT="#78352D",CREAM="#FDF6E8",BAND_ROW="#F6ECD6";
+const NAME_SIZE={1:16,2:14,4:11.5,6:10.5,8:9,9:9.5},PAD={1:6,2:5,4:3.8,6:3.4,8:3,9:3};
+const FONT_BASE={1:10,2:8.5,4:7,6:6,8:5.4,9:5},OBJ_BASE={1:11,2:9.5,4:8.2,6:7.2,8:6.4,9:6.6};
+const CARD_AREAS={1:194*281,2:138*194,4:94*137,6:94*90,8:94*66,9:63.5*88.9};
+const RARITY_COLORS=[["artefacto","#A07A12"],["legendario","#C8610A"],["muy raro","#6A3D9A"],["poco comun","#2E7D32"],["raro","#1F5FA8"],["comun","#6B6560"]];
+const SCHOOL_COLORS=[["abjuracion","#1F5FA8"],["conjuracion","#9A6B00"],["adivinacion","#2B7A78"],["encantamiento","#B03A6F"],["evocacion","#B5321F"],["ilusion","#6A3D9A"],["nigromancia","#2E6B3A"],["transmutacion","#8A5A2B"]];
+const LADDER={criatura:[[127,88.9],[177.8,127],[254,177.8]],otros:[[63.5,88.9],[94,137.5],[127,177.8],[177.8,254]]};
+const SIZE_NAMES={"63.5x88.9":"póker","94x137.5":"4 por hoja","127x88.9":"4 por hoja, apaisada","177.8x127":"2 por hoja","127x177.8":"2 por hoja","254x177.8":"1 por hoja","177.8x254":"1 por hoja","94x137":"4 por hoja","138x194":"2 por hoja"};
+const MM=96/25.4,PT=96/72;  // px por mm y por pt
+const H=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const noAcc=s=>(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const num=v=>String(v).replace(/\./g,",");
+function fmt(s){
+  s=H((s||"").trim()).replace(/\\n/g,"\n");
+  s=s.replace(/\*\*\*([\s\S]+?)\*\*\*/g,"<b><i>$1</i></b>").replace(/\*\*([\s\S]+?)\*\*/g,"<b>$1</b>");
+  s=s.replace(/(?<![\w*])\*(?!\s)([\s\S]+?)(?<!\s)\*(?![\w*])/g,"<i>$1</i>");
+  return s.replace(/\r\n|\r|\n/g,"<br>");
+}
+const cvs=document.createElement("canvas").getContext("2d");
+const FONTS={title:'bold %pt "Times New Roman",Times,serif',italic:'italic %pt Helvetica,Arial,sans-serif'};
+function fitSize(text,font,size,maxMm,min){  // como fit_size del script: baja de 0,25 en 0,25
+  while(size>min){cvs.font=FONTS[font].replace("%",size);if(cvs.measureText(text).width<=maxMm*MM)break;size-=0.25}
+  return size;
+}
+const firstInt=s=>{const m=String(s||"").match(/-?\d+/);return m?parseInt(m[0]):null};
+const signed=n=>(n>=0?"+":"")+n;
+const sgn=r=>/^\d+$/.test(r||"")?"+"+r:r;
+function abilityTable(d){
+  const st=d.salvaciones||"";let matched=false;
+  const out=["fue","des","con","int","sab","car"].map(k=>{
+    const sc=firstInt(d[k]);if(sc===null)return[k.toUpperCase(),"—","—","—"];
+    const mod=Math.floor((sc-10)/2);const m=st.match(new RegExp("\\b"+k+"\\w*\\.?\\s*([+\\-]\\s*\\d+)","i"));
+    if(m)matched=true;return[k.toUpperCase(),String(sc),signed(mod),m?m[1].replace(/\s/g,""):signed(mod)]});
+  return[out,!!(st&&!matched)];
+}
+function initiative(d){
+  let b=d.iniciativa_bonus||"",v=d.iniciativa_valor||"";
+  if(!b){const dx=firstInt(d.des);if(dx!==null){const m=Math.floor((dx-10)/2);b=signed(m);v=v||String(10+m)}}
+  b=sgn(b);return b?b+(v?" ("+v+")":""):"";
+}
+function spellLevel(d){const n=noAcc(d.nivel).trim();if(n.startsWith("truc")||n==="0"||n==="t")return 0;return firstInt(n)}
+function subtitle(t,d){
+  if(t==="objeto"){let x=[d.tipo,d.rareza].filter(Boolean).join(", ");const a=(d.sintonizacion||"").trim();
+    if(a&&!["no","n","-","—","0","false"].includes(a.toLowerCase())){const m=a.match(/^(s[ií]|yes|true|x|1)(?=$|[\s,:;()\-])[\s,:;()\-]*(.*?)[\s)]*$/i);  // \b de JS no reconoce la "í"
+      const e=m?"requiere sintonización"+(m[2]?" "+m[2]:""):"requiere sintonización "+a;x+=x?" ("+e+")":e}
+    return x||d.categoria||""}
+  if(t==="conjuro"){const s=(d.escuela||"").trim(),l=spellLevel(d);let x;
+    if(l===0)x="Truco"+(s?" de "+s.toLowerCase():"");else if(l!==null)x=s?s[0].toUpperCase()+s.slice(1)+" de nivel "+l:"Nivel "+l;else x=s;
+    return x+(d.clases?" ("+d.clases+")":"")}
+  if(t==="regla"){let x=d.tipo||"";if(d.requisito)x+=x?" (Requisito: "+d.requisito+")":"Requisito: "+d.requisito;return x||d.categoria||""}
+  const npc=(d.categoria||"").toLowerCase()==="pnj";
+  return(npc?d.rol_especie_actitud:d.tipo_tamano_alineamiento)||d.tipo_tamano_alineamiento||d.rol_especie_actitud||d.categoria||"";
+}
+function accentFor(t,d){
+  const c=(d.color||"").trim();if(/^#?[0-9a-f]{6}$/i.test(c))return c[0]==="#"?c:"#"+c;
+  const list=t==="conjuro"?[SCHOOL_COLORS,d.escuela]:t==="objeto"?[RARITY_COLORS,d.rareza]:null;
+  if(list){const v=noAcc(list[1]);for(const[k,h]of list[0])if(v.includes(k))return h}
+  return ACCENT;
+}
+// ---- contenido (equivale a build_*_elements) ----
+function tables(value,fs,acc){  // líneas que empiezan por "|" = tabla (v14)
+  const blocks=[];
+  for(const line of String(value).split(/\\n|\r\n|\r|\n/)){
+    if(line.trim().startsWith("|")){const cells=line.trim().replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
+      if(cells.every(c=>/^:?-{2,}:?$/.test(c)))continue;
+      if(blocks.length&&blocks.at(-1)[0]==="t")blocks.at(-1)[1].push(cells);else blocks.push(["t",[cells]])}
+    else if(blocks.length&&blocks.at(-1)[0]==="x")blocks.at(-1)[1]+="\n"+line;else blocks.push(["x",line])}
+  return blocks.filter(b=>b[0]==="t"||b[1].trim());
+}
+function tableHtml(rows,fs,acc){
+  const nc=Math.max(...rows.map(r=>r.length));
+  return '<table style="margin-top:'+1.2*fs/7+'mm">'+rows.map((r,k)=>'<tr style="'+(k%2===1?"background:"+BAND_ROW:"")+'">'+
+    Array.from({length:nc},(_,i)=>k===0?'<th style="border-bottom:.5pt solid '+ACCENT+';padding:.3mm .8mm .5mm">'+fmt(r[i]||"")+"</th>":'<td style="padding:.3mm .8mm .5mm">'+fmt(r[i]||"")+"</td>").join("")+"</tr>").join("")+"</table>";
+}
+function sections(items,fs,acc){
+  const s=fs/7,ts=fs*1.3;let h="";
+  for(const[title,value]of items){if(!value)continue;
+    tables(value,fs,acc).forEach(([kind,c],k)=>{
+      if(kind==="t"){h+=tableHtml(c,fs,acc);return}
+      if(!title||k>0){h+='<p style="margin-top:'+1.2*s+'mm">'+fmt(c)+"</p>";return}
+      h+='<div class="st" style="margin-top:'+1.5*s+'mm;font-size:'+ts+'pt;color:'+acc+';padding-bottom:'+ts*0.25+'pt;border-bottom:.4pt solid '+acc+';margin-bottom:.5mm">'+H(title)+"</div>"+
+         '<p style="margin-bottom:'+2.2*s+'mm">'+fmt(c)+"</p>"});
+  }
+  return h;
+}
+const band=(lines,s,extra)=>'<div class="band" style="padding-top:'+0.8*s+'mm;padding-bottom:'+(extra??0.8*s)+'mm">'+lines+"</div>";
+function abilHtml(d,fs,colMm,acc){
+  const[ab]=abilityTable(d),rh=fs*1.5,half=(colMm-3)/2,narrow=half<32,small=Math.max(fs*0.75,4);
+  const heads=narrow?["PT","MOD","SV"]:["PUNT.","MOD","SALV"],pos=[60,78,93];
+  const side=k=>{let h='<div style="width:'+half+'mm;height:'+rh*4+'pt">';
+    h+=heads.map((t,i)=>'<span style="left:'+pos[i]+'%;top:0;line-height:'+rh+'pt;font-weight:bold;color:'+MUTED+';font-size:'+small*(narrow?0.9:1)+'pt">'+t+"</span>").join("");
+    for(let i=0;i<3;i++){const[l,sc,m,sv]=ab[i+3*k],top=rh*(i+1);
+      if(i%2===0)h+='<div style="position:absolute;left:0;right:0;top:'+top+'pt;height:'+rh+'pt;background:'+BAND_ROW+';border-radius:.6mm"></div>';
+      h+='<span style="left:1.2mm;transform:none;top:'+top+'pt;line-height:'+rh+'pt;font-weight:bold;color:'+ACCENT+'">'+l+"</span>";
+      [sc,m,sv].forEach((v,j)=>h+='<span style="left:'+pos[j]+'%;top:'+top+'pt;line-height:'+rh+'pt">'+H(v)+"</span>")}
+    return h+"</div>"};
+  return '<div class="ab" style="margin-top:.4mm;margin-bottom:'+(0.8*fs/7-0.4)+'mm">'+side(0)+side(1)+"</div>";
+}
+function content(t,d,fs,colMm,acc){
+  const s=fs/7,L=(lab,v)=>v?"<p><b>"+lab+"</b> "+fmt(v)+"</p>":"";
+  if(t==="criatura"){
+    const ini=initiative(d),[,unp]=abilityTable(d);
+    let h=band("<p><b>CA</b> "+fmt(d.ca||"—")+(ini?" &nbsp;&nbsp; <b>Iniciativa</b> "+fmt(ini):"")+"</p>"+L("PG",d.puntos_golpe||"—")+L("Velocidad",d.velocidad||"—")+
+      '<div style="height:'+0.6*s+'mm"></div>'+abilHtml(d,fs,colMm,acc),s,0);
+    h+='<div style="height:'+0.4*s+'mm"></div>';
+    h+=L("Habilidades",d.habilidades)+(unp?L("Salvaciones",d.salvaciones):"")+L("Vulnerabilidades",d.vulnerabilidades)+L("Resistencias",d.resistencias)+
+       L("Inmunidades",[d.inmunidades_dano,d.inmunidades_estado].filter(Boolean).join("; "))+L("Equipo",d.equipo_armadura)+L("Sentidos",d.sentidos_percepcion_pasiva)+L("Idiomas",d.idiomas);
+    let bc=d.bonificador_competencia||"";if(/^\d+$/.test(bc))bc="+"+bc;
+    const ex=[d.px?"PX "+d.px:"",bc?"BC "+bc:""].filter(Boolean).join("; ");
+    if(d.vd||ex)h+=L("VD",(d.vd||"")+(ex?" ("+ex+")":""));
+    return h+sections([["Rasgos",d.rasgos],["Acciones",d.acciones],["Acciones adicionales",d.acciones_adicionales],["Reacciones",d.reacciones],["Acciones legendarias",d.acciones_legendarias],["Notas",d.notas]],fs,acc);
+  }
+  if(t==="objeto"){
+    const G=[[["Coste","coste"],["Peso","peso"]],[["Daño","dano"],["Maestría","maestria"]],[["CA","ca_armadura"],["Fuerza requerida","requisito_fue"],["Sigilo","sigilo"]],[["Propiedades","propiedades"]],[["Cargas","cargas"]]];
+    const lines=G.map(g=>g.filter(([,k])=>d[k]).map(([l,k])=>"<b>"+l+"</b> "+fmt(d[k])).join(" &nbsp;&nbsp;&nbsp; ")).filter(Boolean).map(x=>"<p>"+x+"</p>").join("");
+    return(lines?band(lines,s):"")+sections([["",d.descripcion],["Efectos",d.efectos],["Maldición",d.maldicion],["Notas",d.notas]],fs,acc);
+  }
+  if(t==="conjuro"){
+    const lines=[["Tiempo de lanzamiento","tiempo_lanzamiento"],["Alcance","alcance"],["Componentes","componentes"],["Duración","duracion"]].map(([l,k])=>L(l,d[k])).join("");
+    return(lines?band(lines,s):"")+sections([["",d.descripcion],[spellLevel(d)===0?"Mejora de truco":"Usando un espacio de nivel superior",d.niveles_superiores],["Notas",d.notas]],fs,acc);
+  }
+  const datos=(d.datos||"").split(/\\n|\r\n|\n/).map(x=>x.trim()).filter(Boolean).map(x=>"<p>"+fmt(x)+"</p>").join("");
+  const items=[["",d.descripcion]];for(let i=1;i<=4;i++)items.push([d["seccion"+i+"_titulo"]||"",d["seccion"+i+"_texto"]]);items.push(["Notas",d.notas]);
+  return(datos?band(datos,s):"")+sections(items,fs,acc);
+}
+// ---- tarjeta completa (equivale a draw_card) ----
+const keyFor=(w,h)=>+Object.keys(CARD_AREAS).reduce((a,k)=>Math.abs(Math.log(w*h/CARD_AREAS[k]))<Math.abs(Math.log(w*h/CARD_AREAS[a]))?k:a);
+function frontCard(t,d,w,h,fs){
+  const key=keyFor(w,h),pad=PAD[key],inner=w-2*pad,acc=accentFor(t,d),pie=key<=4;
+  const name=d.nombre||"Sin nombre",br=t==="conjuro"?(key<=4?2.6:2.4):0,nw=inner-(br?2*br+1.5:0);
+  const ns=fitSize(name,"title",NAME_SIZE[key],nw,7),sub=subtitle(t,d);
+  const ss=fitSize(sub,"italic",(t==="criatura"?FONT_BASE[key]:OBJ_BASE[key])*0.95,nw,4.5);
+  const nameBase=3.6+ns*0.85/ (72/25.4),subBase=nameBase+ss*1.45/(72/25.4),rule=subBase+1.6,top=rule+1.2,bottom=3.6+(pie?2.8:0);
+  const ncols=w>h*1.25?2:1,colw=ncols===2?(inner-4)/2:inner;
+  const el=document.createElement("div");el.className="card";el.style.cssText+="width:"+w+"mm;height:"+h+"mm";
+  let x='<div class="rb" style="top:1.5mm;background:'+acc+'"></div><div class="rb" style="bottom:1.5mm;background:'+acc+'"></div>'+
+    '<div class="nm" style="left:'+pad+'mm;top:calc('+nameBase+'mm - '+ns*0.72+'pt);font-size:'+ns+'pt;color:'+acc+'">'+H(name)+"</div>"+
+    '<div class="sb" style="left:'+pad+'mm;top:calc('+subBase+'mm - '+ss*0.74+'pt);font-size:'+ss+'pt">'+H(sub)+"</div>"+
+    '<div class="hr" style="left:'+pad+'mm;right:'+pad+'mm;top:'+rule+'mm;background:'+acc+'"></div>';
+  if(br){const l=spellLevel(d);x+='<div class="badge" style="width:'+2*br+'mm;height:'+2*br+'mm;right:'+pad+'mm;top:calc('+nameBase+'mm - '+ns*0.33+'pt - '+br+'mm);background:'+acc+';font-size:'+br*3+'pt">'+(l===0?"T":l===null?"?":l)+"</div>"}
+  x+='<div class="ct" style="left:'+pad+'mm;width:'+inner+'mm;top:'+top+'mm;height:'+(h-top-bottom)+'mm;column-count:'+ncols+';font-size:'+fs+'pt">'+content(t,d,fs,colw,acc)+"</div>";
+  if(pie)x+='<div class="pie" style="right:'+pad+'mm;bottom:calc(3.7mm - 1pt)">Tarjeta personalizada · 5e · 2024</div>';
+  el.innerHTML=x;
+  const ct=el.querySelector(".ct"),first=ct.firstElementChild;if(first&&!first.classList.contains("band"))first.style.marginTop="0";
+  return el;
+}
+// la banda de fondo sobresale 1,4 mm a cada lado a propósito; solo cuenta como "no cabe" una columna de más
+function fits(el){const ct=el.querySelector(".ct");return ct.scrollWidth<=ct.clientWidth+2*MM&&ct.scrollHeight<=ct.clientHeight+1}
+function extraCards(el,w,h){const ct=el.querySelector(".ct"),ncols=w>h*1.25?2:1,colPx=(ct.clientWidth+4*MM)/ncols;return Math.max(1,Math.ceil(Math.round(ct.scrollWidth/colPx-0.05)/ncols))}
+function layout(t,d){  // equivale a run_ladder: tamaño más pequeño en el que cabe, bajando la letra hasta la mínima
+  const f0=parseFloat($("fs").value)||7,fmin=parseFloat($("fm").value)||6,opt=$("sz").value,box=$("measure");
+  let sizes,fixed=false;
+  const m=opt.match(/--tamano ([\d.]+)x([\d.]+)/);
+  if(m){sizes=[[+m[1],+m[2]]];fixed=true}
+  else if(opt==="--por-pagina 4"){sizes=[[94,137]];fixed=true}
+  else if(opt==="--por-pagina 2"){sizes=[[138,194]];fixed=true}
+  else sizes=t==="criatura"?LADDER.criatura:LADDER.otros;
+  let res=null;
+  for(let si=0;si<sizes.length;si++){const[w,h]=sizes[si];
+    for(let fs=f0;fs>=fmin-1e-9;fs-=0.25){
+      const el=frontCard(t,d,w,h,fs);box.innerHTML="";box.append(el);
+      const ok=fits(el);res={w,h,fs,si,ok,cards:ok?1:extraCards(el,w,h)};
+      if(ok)return res;
+    }
+  }
+  return res;
+}
+function backCard(t,d,w,h){
+  const key=keyFor(w,h),vert=w>h*1.25;if(vert)[w,h]=[h,w];  // las apaisadas llevan el reverso en vertical
+  const pad=PAD[key],inner=w-2*pad,acc=accentFor(t,d),P=72/25.4;
+  const tw=(d.tipo||"").split(/[(,]/)[0].trim();
+  const label=(t==="conjuro"?(spellLevel(d)===0?"TRUCO":"CONJURO"):t==="criatura"?(d.categoria||"Criatura"):(tw||(t==="objeto"?"Objeto":"Regla"))).toUpperCase();
+  const hidden=d.nombre_reverso||"",name=hidden||d.nombre||"Sin nombre";
+  let sub="";if(!hidden){if(t==="conjuro"){const l=spellLevel(d);sub=[d.escuela,l===0?"Truco":l!==null?"Nivel "+l:""].filter(Boolean).join(" · ")}
+    else if(t==="objeto")sub=[d.rareza,noAcc(subtitle(t,d)).includes("sintoniz")?"Sintonización":""].filter(Boolean).join(" · ");
+    else if(t==="criatura")sub=d.tipo_tamano_alineamiento||d.rol_especie_actitud||"";else sub=d.requisito||""}
+  const ls=fitSize(label,"title",NAME_SIZE[key]*1.05,inner,6),ns=fitSize(name,"title",NAME_SIZE[key]*1.05,inner,6),ss=fitSize(sub,"italic",OBJ_BASE[key]*0.95,inner,4.5);
+  const lbBase=4+ls*0.8/P,topMid=lbBase+3.2;let yy=4.8,sbBase=null;if(sub){sbBase=yy;yy+=ss/P+1}
+  const nLine=yy+ns/P+1,botMid=nLine+2.2,mh=h-topMid-botMid;
+  const el=document.createElement("div");el.className="back";el.style.cssText="width:"+w+"mm;height:"+h+"mm;background:"+acc;
+  let x='<div class="fr"></div><div class="lb" style="top:calc('+lbBase+'mm - '+ls*0.72+'pt);font-size:'+ls+'pt">'+H(label)+"</div>"+
+    '<div class="ln" style="left:'+pad+'mm;right:'+pad+'mm;top:'+(lbBase+1.4)+'mm"></div>'+
+    '<div class="bn" style="bottom:'+yy+'mm;font-size:'+ns+'pt">'+H(name)+"</div>"+(sub?'<div class="bs" style="bottom:'+sbBase+'mm;font-size:'+ss+'pt">'+H(sub)+"</div>":"")+
+    '<div class="ln" style="left:'+pad+'mm;right:'+pad+'mm;bottom:'+nLine+'mm"></div>';
+  let emblem=null;  // geometría del d20 (en mm), para dibujarlo también directamente en el canvas al exportar
+  if(mh>=8){
+    const r=Math.min(inner,mh)*0.42,cx=w/2,cy=topMid+mh/2,lw=Math.max(0.28,r*0.09*0.3528);
+    const pt=(rr,a)=>[cx+rr*Math.cos(a*Math.PI/180),cy-rr*Math.sin(a*Math.PI/180)];
+    const hx=[0,1,2,3,4,5].map(k=>pt(r,90+60*k)),tr=[90,210,330].map(a=>pt(r*0.52,a));
+    const segs=[[0,[0,1,5]],[1,[2,1,3]],[2,[4,3,5]]].flatMap(([ti,hs])=>hs.map(hi=>[tr[ti],hx[hi]]));
+    const l=t==="conjuro"?spellLevel(d):null,lv=t==="conjuro"?(l===0?"T":l===null?"":String(l)):"";
+    emblem={hx,tr,segs,lw,lv,cx,cy,r};
+    const poly=p=>'<polygon points="'+p.map(q=>q.join(",")).join(" ")+'"/>';
+    const lines=segs.map(([a,b])=>'<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>').join("");
+    x+='<svg class="emb" viewBox="0 0 '+w+" "+h+'" style="left:0;top:0;width:'+w+'mm;height:'+h+'mm"><g fill="none" stroke="'+CREAM+'" stroke-width="'+lw+'" stroke-linejoin="round">'+poly(hx)+poly(tr)+lines+"</g>"+
+      (lv!==""?'<text x="'+cx+'" y="'+(cy+r*0.2)+'" text-anchor="middle" fill="'+CREAM+'" font-family="Helvetica,Arial,sans-serif" font-weight="bold" font-size="'+r*0.6+'">'+lv+"</text>":"")+"</svg>";
+    if(d.imagen){x+='<img alt="" src="'+H(d.imagen)+'" style="left:'+pad+'mm;top:'+topMid+'mm;width:'+inner+'mm;height:'+mh+'mm;background:'+acc+'" onerror="this.remove()">'}
+  }
+  el.innerHTML=x;el._emblem=emblem;return{el,vert};
+}
+// Dibuja el d20 directamente en el canvas (Android pinta mal los SVG dentro de html2canvas: salían grises)
+function drawEmblem(g,e,pxmm){
+  const P=([x,y])=>[x*pxmm,y*pxmm];
+  g.save();g.setTransform(1,0,0,1,0,0);  // html2canvas deja el contexto escalado
+  g.strokeStyle=CREAM;g.fillStyle=CREAM;g.lineWidth=e.lw*pxmm;g.lineJoin="round";g.lineCap="round";
+  for(const poly of[e.hx,e.tr]){g.beginPath();poly.forEach((p,i)=>g[i?"lineTo":"moveTo"](...P(p)));g.closePath();g.stroke()}
+  for(const[a,b]of e.segs){g.beginPath();g.moveTo(...P(a));g.lineTo(...P(b));g.stroke()}
+  if(e.lv){g.font="bold "+e.r*0.6*pxmm+"px Helvetica,Arial,sans-serif";g.textAlign="center";g.fillText(e.lv,e.cx*pxmm,(e.cy+e.r*0.2)*pxmm)}
+  g.restore();
+}
+let pvSide="front";
+$("gopv").onclick=()=>$("prevbox").scrollIntoView({behavior:"smooth",block:"start"});
+$("goform").onclick=()=>$("form").scrollIntoView({behavior:"smooth",block:"start"});
+if("IntersectionObserver"in window)new IntersectionObserver(e=>{$("gopv").style.visibility=e[0].isIntersecting?"hidden":""}).observe($("prevbox"));
+$("pvf").onclick=()=>{pvSide="front";$("pvf").className="on";$("pvb").className="";preview()};
+$("pvb").onclick=()=>{pvSide="back";$("pvb").className="on";$("pvf").className="";preview()};
+function preview(){
+  const pv=$("pv"),info=$("pvinfo");if(!$("f_nombre"))return;
+  const d=formData(),t=cur,r=layout(t,d);
+  let el,w=r.w,h=r.h,note="";
+  if(pvSide==="front"){el=frontCard(t,d,w,h,r.fs)}
+  else{const b=backCard(t,d,w,h);el=b.el;if(b.vert){[w,h]=[h,w];note=" · reverso en vertical: gira la carta para verlo derecho"}}
+  $("measure").innerHTML="";
+  const avail=Math.max(160,pv.clientWidth-20),k=Math.min(avail/(w*MM),Math.max(260,innerHeight-260)/(h*MM),2.2);
+  el.style.transform="scale("+k+")";const wrap=document.createElement("div");wrap.style.cssText="width:"+w*MM*k+"px;height:"+h*MM*k+"px";wrap.append(el);
+  pv.innerHTML="";pv.append(wrap);
+  const nm=num(r.w)+" × "+num(r.h)+" mm",tag=SIZE_NAMES[r.w+"x"+r.h];
+  let x="<b>"+nm+"</b>"+(tag?" ("+tag+")":"")+" · letra "+num(r.fs)+" pt"+note;
+  const f0=parseFloat($("fs").value)||7;
+  if(!r.ok)x+='<span class="w">No cabe ni con letra de '+num(r.fs)+' pt: el script la continuará en '+r.cards+' tarjetas ('+(r.cards>1?"1/"+r.cards+", 2/"+r.cards+"…":"")+'). Acorta el texto o elige otro tamaño.</span>';
+  else{if(r.si>0)x+='<span class="w">No cabe en '+num(LADDER[t==="criatura"?"criatura":"otros"][0].join(" × "))+' mm: sale en un tamaño mayor.</span>';
+    if(r.fs<f0-1e-9)x+='<span class="w">Letra reducida a '+num(r.fs)+' pt para que quepa.</span>'}
+  info.innerHTML=x;
+}
+window.addEventListener("resize",()=>{clearTimeout(pvTimer);pvTimer=setTimeout(preview,150)});
+// ---- Descarga directa desde el navegador (casos sueltos; el PDF bueno sigue siendo el del script) ----
+function cardFor(side){  // la tarjeta del formulario, a tamaño real, sin escalar
+  const d=formData(),r=layout(cur,d);$("measure").innerHTML="";
+  if(side==="front")return{el:frontCard(cur,d,r.w,r.h,r.fs),w:r.w,h:r.h,d};
+  const b=backCard(cur,d,r.w,r.h);return{el:b.el,w:b.vert?r.h:r.w,h:b.vert?r.w:r.h,d};
+}
+const baseName=d=>(d.nombre||"tarjeta").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_")||"tarjeta";
+async function cardCanvas(side){  // dibuja la tarjeta a 300 ppp en un canvas
+  if(window.html2canvas){  // fiable también en navegadores de móvil
+    const{el,w,h,d}=cardFor(side),host=document.createElement("div");
+    el.querySelectorAll("img").forEach(i=>i.remove());  // una imagen externa no se puede incrustar: se ve el d20
+    host.style.cssText="position:absolute;left:-10000px;top:0";host.append(el);document.body.append(host);
+    const emb=el._emblem,svg=el.querySelector("svg.emb");
+    if(emb&&svg)svg.style.visibility="hidden";  // el d20 se dibuja después, a mano
+    try{const canvas=await window.html2canvas(el,{scale:300/96,backgroundColor:"#ffffff",logging:false});
+      if(emb&&svg)drawEmblem(canvas.getContext("2d"),emb,canvas.width/w);
+      return{canvas,w,h,d}}
+    finally{host.remove()}
+  }
+  return new Promise((ok,fail)=>{  // sin conexión: SVG con el HTML dentro (va bien en escritorio)
+    const{el,w,h,d}=cardFor(side),k=300/96;
+    el.querySelectorAll("img").forEach(i=>i.remove());
+    el.style.transform="scale("+k+")";
+    const css=document.querySelector("style").textContent,W=Math.round(w*MM*k),Hh=Math.round(h*MM*k);
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+Hh+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+"</style>"+new XMLSerializer().serializeToString(el)+"</div></foreignObject></svg>";
+    const img=new Image();
+    img.onload=()=>{const c=document.createElement("canvas");c.width=W;c.height=Hh;c.getContext("2d").drawImage(img,0,0);ok({canvas:c,w,h,d})};
+    img.onerror=()=>fail(new Error("svg"));
+    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  });
+}
+const needName=()=>{if($("f_nombre").value.trim())return false;alert("Escribe al menos el nombre de la tarjeta.");return true};
+$("png").onclick=async()=>{
+  if(needName())return;
+  try{const side=pvSide,{canvas,d}=await cardCanvas(side);
+    const blob=await new Promise(r=>canvas.toBlob(r,"image/png"));
+    await saveFile(baseName(d)+(side==="front"?"_frente":"_reverso")+".png",blob)}
+  catch(e){alert("Este navegador no permite generar la imagen. Prueba con «Descargar PDF» o «Imprimir».")}
+};
+$("dpdf").onclick=async()=>{  // PDF A4 con la tarjeta a tamaño real (jsPDF); sin conexión, se usa el cuadro de impresión
+  if(needName())return;
+  if(!window.jspdf){alert("Para descargar el PDF hace falta conexión a internet la primera vez. Se abrirá el cuadro de impresión: elige «Guardar como PDF».");$("pdf").click();return}
+  try{
+    const sides=$("rv").checked?["front","back"]:["front"];let doc=null,name="";
+    for(const side of sides){
+      const{canvas,w,h,d}=await cardCanvas(side),land=w>190;name=baseName(d);
+      if(!doc)doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:land?"l":"p",compress:true});else doc.addPage("a4",land?"l":"p");
+      const pw=land?297:210,x=side==="front"?10:pw-10-w;  // el reverso en espejo, como en la impresión
+      const flat=document.createElement("canvas");flat.width=canvas.width;flat.height=canvas.height;  // JPEG sobre blanco: pesa mucho menos que PNG
+      const g=flat.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,flat.width,flat.height);g.drawImage(canvas,0,0);
+      doc.addImage(flat.toDataURL("image/jpeg",0.92),"JPEG",x,10,w,h);
+    }
+    await saveFile(name+".pdf",doc.output("blob"));
+  }catch(e){alert("No se ha podido generar el PDF. Prueba con «Imprimir».")}
+};
+$("pdf").onclick=()=>{
+  if(needName())return;
+  const pa=$("printarea");pa.innerHTML="";
+  for(const side of $("rv").checked?["front","back"]:["front"]){const{el}=cardFor(side),box=document.createElement("div");if(side==="back")box.className="rev";box.append(el);pa.append(box)}
+  print();
+};
+list();form();cmd();
+// ---- App instalable (PWA) ----
+const VERSION="1.3";  // súbela al cambiar la app, junto con CACHE en sw.js
+$("ver").textContent="Versión "+VERSION+".";
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
