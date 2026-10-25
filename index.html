@@ -58,6 +58,16 @@ footer.aviso p{margin:4px auto;max-width:760px}
 .guia .lista{list-style:disc;padding-left:18px}
 .guia .lista li{display:list-item;border:0;padding:2px 0}
 .guia .cl{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:3px}
+/* Orígenes (dato interno para la app Hoja de personaje; no sale en la tarjeta) */
+.orig{grid-column:span 6;border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-top:4px}
+.orig h3{margin:0;font-size:14px;color:var(--acc)}
+.orig>p.hint{margin:2px 0 6px;font-size:12px}
+.orow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.orow select,.orow input{width:auto;flex:1 1 120px;min-width:0}
+.orow .pa{display:flex;flex-wrap:wrap;gap:6px;flex:3 1 220px}
+.orow .pk{display:flex;gap:6px;flex:1 1 150px}
+.orow input.nv{flex:0 0 76px}
+.orow select.md{flex:0 1 190px}
 /* En el móvil la vista previa queda debajo del formulario: botón flotante para ir y volver */
 #gopv,#goform{display:none}
 @media (max-width:900px){
@@ -145,6 +155,13 @@ Con éxito, la mitad del daño.</pre>
 <li><b>Barajas</b> (como la Baraja de muchas cosas): pon el mismo «Texto del reverso», tipo y color en todas sus cartas, para que los reversos sean idénticos.</li>
 <li><b>Aviso naranja:</b> la tarjeta no cabe con la letra normal. Acorta el texto si la quieres en tamaño póker.</li>
 </ul>
+<h3>Orígenes (para la app Hoja de personaje)</h3>
+<p>Al final del formulario puedes indicar a quién pertenece la tarjeta: una clase, subclase, especie, linaje, trasfondo, dote o conjuro. La app Hoja de personaje usa este dato para dar a cada jugador sus tarjetas al importar el mazo. <b>No cambia nada de la tarjeta</b>: ni la vista previa ni el PDF.</p>
+<ul class="lista">
+<li><b>Nivel:</b> nivel mínimo para tenerla. En clase y subclase es el nivel <i>en esa clase</i> (sirve para multiclase); en lo demás, el nivel del personaje. Vacío = desde nivel 1. En conjuros de lista de clase no hace falta: la Hoja lo calcula.</li>
+<li><b>Modo:</b> «Lista» = el jugador la elige (lo normal en conjuros de clase); «Siempre» = se le asigna sola (dominio, juramento, linaje, dotes…); «Forma salvaje» = criaturas para el druida. Por defecto: lista en conjuros con clase, siempre en lo demás.</li>
+<li>Si algo es casero y no está en la lista, elige «Otro…» y escríbelo.</li>
+</ul>
 </details>
 <div class="tabs" id="tabs"></div>
 <form id="form" autocomplete="off"></form>
@@ -192,11 +209,12 @@ const RAR="Común,Poco común,Raro,Muy raro,Legendario,Artefacto";
 const SCH="Abjuración,Conjuración,Adivinación,Encantamiento,Evocación,Ilusión,Nigromancia,Transmutación";
 const REV="nombre_reverso|Texto del reverso en lugar del nombre (opcional; ponlo igual en todas las cartas de una baraja para no delatarlas)|t";
 const IMG="imagen|Imagen del reverso (nombre del archivo, en la misma carpeta que el CSV)|t";
+const ORIG="origenes|Orígenes|o";  // editor propio (ver más abajo); no se dibuja en la tarjeta
 const TYPES={
-criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
-objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
-conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]},
-regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t"]}
+criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]}
 };
 const def=k=>TYPES[k].f.map(s=>{const[a,b,c,d]=s.split("|");return{k:a,l:b,t:c,o:d?d.split(","):null}});
 let cur="criatura",edit=null,deck=[];
@@ -209,6 +227,7 @@ function form(data){
   tabs();$("ftitle").textContent=edit===null?"Nueva tarjeta":"Editando: "+(deck[edit].d.nombre||"sin nombre");
   const f=$("form");f.innerHTML="";data=data||{};
   for(const x of def(cur)){
+    if(x.t==="o"){f.append(origEditor(data[x.k]));continue}
     const l=document.createElement("label");l.className=x.t==="a"?"a":x.t==="x"?"x":"";l.append(x.l);
     let i;
     if(x.t==="a"){i=document.createElement("textarea")}
@@ -222,7 +241,7 @@ function form(data){
   f.append(bar);
   preview();
 }
-const formData=()=>{const d={};for(const x of def(cur))d[x.k]=$("f_"+x.k).value.trim();return d};
+const formData=()=>{const d={};for(const x of def(cur))d[x.k]=x.t==="o"?origText():$("f_"+x.k).value.trim();return d};
 $("form").onsubmit=e=>{
   e.preventDefault();const d=formData();
   if(!d.nombre){alert("Escribe al menos el nombre de la tarjeta.");return}
@@ -237,7 +256,8 @@ function list(){
   deck.forEach((c,i)=>{
     const li=document.createElement("li");
     li.innerHTML='<span class="t"></span><span class="n"></span>';
-    li.children[0].textContent=TYPES[c.t].n;li.children[1].textContent=c.d.nombre;
+    li.children[0].textContent=TYPES[c.t].n+(c.d.origenes?" 🏷":"");li.children[1].textContent=c.d.nombre;
+    if(c.d.origenes)li.children[0].title="Orígenes: "+c.d.origenes;
     const mk=(t,fn)=>{const b=document.createElement("button");b.className="sm";b.textContent=t;b.onclick=fn;li.append(b)};
     mk("Editar",()=>{cur=c.t;edit=i;form(c.d);window.scrollTo(0,0)});
     mk("Copiar",()=>{deck.splice(i+1,0,{t:c.t,d:{...c.d}});save();list()});
@@ -302,6 +322,100 @@ $("file").onchange=async e=>{
   e.target.value="";save();list();alert(n+" tarjetas importadas.");
 };
 $("clr").onclick=()=>{if(deck.length&&confirm("¿Vaciar todo el mazo?")){deck=[];edit=null;save();list();form()}};
+
+// ===================================================================
+// Orígenes: a quién pertenece la tarjeta (clase, subclase, especie, linaje, trasfondo, dote o conjuro),
+// para que la app Hoja de personaje la asigne sola. Es un dato interno: no se dibuja en la tarjeta.
+// Columna "origenes": "tipo:Nombre@nivel!modo; ..." (ver Contextos/traspaso_forja_etiquetas_hoja.md).
+// Los nombres salen del catálogo común con la Hoja (Contextos/catalogo_reglas_2024.json, copiado aquí).
+// ===================================================================
+const CATALOGO={"_info":{"que_es":"Catálogo común de nombres de reglas 2024 (Manual del Jugador en español) para la app Hoja de personaje y Forja de Cartas. Solo nombres y datos de mecánica, sin texto de reglas.","fuente":"D&D 2024 Manual del Jugador.pdf (índice y encabezados de los capítulos 3, 4 y 5), extraído el 25/10/2026","version":1,"comparar_nombres":"Sin distinguir mayúsculas/minúsculas, pero sí tildes. Escribir siempre como aparecen aquí.","formato_origenes":"tipo:Nombre@nivel!modo — ver traspaso_forja_etiquetas_hoja.md. Subclase como 'Clase/Subclase'; linaje como 'Especie/Linaje'.","nivel_subclase":3},"caracteristicas":["Fuerza","Destreza","Constitución","Inteligencia","Sabiduría","Carisma"],"clases":[{"nombre":"Bárbaro","dado_golpe":12,"salvaciones":["Fuerza","Constitución"],"lanzamiento":"ninguno","aptitud":null,"subclases":["Senda del Árbol del Mundo","Senda del berserker","Senda del corazón salvaje","Senda del fanático"]},{"nombre":"Bardo","dado_golpe":8,"salvaciones":["Destreza","Carisma"],"lanzamiento":"completo","aptitud":"Carisma","subclases":["Colegio de la danza","Colegio del conocimiento","Colegio del glamour","Colegio del valor"]},{"nombre":"Brujo","dado_golpe":8,"salvaciones":["Sabiduría","Carisma"],"lanzamiento":"pacto","aptitud":"Carisma","subclases":["Patrón celestial","Patrón feérico","Patrón infernal","Patrón primigenio"]},{"nombre":"Clérigo","dado_golpe":8,"salvaciones":["Sabiduría","Carisma"],"lanzamiento":"completo","aptitud":"Sabiduría","subclases":["Dominio de la guerra","Dominio de la luz","Dominio de la vida","Dominio del engaño"]},{"nombre":"Druida","dado_golpe":8,"salvaciones":["Inteligencia","Sabiduría"],"lanzamiento":"completo","aptitud":"Sabiduría","subclases":["Círculo de la luna","Círculo de la tierra","Círculo de las estrellas","Círculo del mar"]},{"nombre":"Explorador","dado_golpe":10,"salvaciones":["Fuerza","Destreza"],"lanzamiento":"medio","aptitud":"Sabiduría","subclases":["Acechador en la penumbra","Cazador","Errante feérico","Señor de las bestias"]},{"nombre":"Guerrero","dado_golpe":10,"salvaciones":["Fuerza","Constitución"],"lanzamiento":"ninguno","aptitud":null,"subclases":["Caballero arcano","Campeón","Guerrero psiónico","Maestro del combate"],"subclases_lanzadoras":{"Caballero arcano":{"lanzamiento":"tercio","aptitud":"Inteligencia"}}},{"nombre":"Hechicero","dado_golpe":6,"salvaciones":["Constitución","Carisma"],"lanzamiento":"completo","aptitud":"Carisma","subclases":["Hechicería aberrante","Hechicería de magia salvaje","Hechicería dracónica","Hechicería mecánica"]},{"nombre":"Mago","dado_golpe":6,"salvaciones":["Inteligencia","Sabiduría"],"lanzamiento":"completo","aptitud":"Inteligencia","subclases":["Abjurador","Adivino","Evocador","Ilusionista"]},{"nombre":"Monje","dado_golpe":8,"salvaciones":["Fuerza","Destreza"],"lanzamiento":"ninguno","aptitud":null,"subclases":["Guerrero de la mano abierta","Guerrero de la misericordia","Guerrero de la sombra","Guerrero de los elementos"]},{"nombre":"Paladín","dado_golpe":10,"salvaciones":["Sabiduría","Carisma"],"lanzamiento":"medio","aptitud":"Carisma","subclases":["Juramento de entrega","Juramento de gloria","Juramento de los antiguos","Juramento de venganza"]},{"nombre":"Pícaro","dado_golpe":8,"salvaciones":["Destreza","Inteligencia"],"lanzamiento":"ninguno","aptitud":null,"subclases":["Asesino","Embaucador arcano","Ladrón","Rebanaalmas"],"subclases_lanzadoras":{"Embaucador arcano":{"lanzamiento":"tercio","aptitud":"Inteligencia"}}}],"especies":[{"nombre":"Aasimar","tamano":["Mediano","Pequeño"],"velocidad":"9 m","linajes":[]},{"nombre":"Dracónido","tamano":["Mediano"],"velocidad":"9 m","nombre_linaje":"Linaje dracónico","linajes":["Azul","Blanco","Bronce","Cobre","Negro","Oro","Oropel","Plata","Rojo","Verde"]},{"nombre":"Elfo","tamano":["Mediano"],"velocidad":"9 m","nombre_linaje":"Linaje élfico","linajes":["Alto elfo","Drow","Elfo de los bosques"]},{"nombre":"Enano","tamano":["Mediano"],"velocidad":"9 m","linajes":[]},{"nombre":"Gnomo","tamano":["Pequeño"],"velocidad":"9 m","nombre_linaje":"Linaje gnomo","linajes":["Gnomo de las rocas","Gnomo de los bosques"]},{"nombre":"Goliat","tamano":["Mediano"],"velocidad":"10,5 m","nombre_linaje":"Linaje gigante","linajes":["Gigante de fuego","Gigante de las colinas","Gigante de las nubes","Gigante de escarcha","Gigante de piedra","Gigante de las tormentas"]},{"nombre":"Humano","tamano":["Mediano","Pequeño"],"velocidad":"9 m","linajes":[]},{"nombre":"Mediano","tamano":["Pequeño"],"velocidad":"9 m","linajes":[]},{"nombre":"Orco","tamano":["Mediano"],"velocidad":"9 m","linajes":[]},{"nombre":"Tiefling","tamano":["Mediano","Pequeño"],"velocidad":"9 m","nombre_linaje":"Legado infernal","linajes":["Abisal","Ctónico","Infernal"]}],"trasfondos":[{"nombre":"Acólito","caracteristicas":["Inteligencia","Sabiduría","Carisma"],"dote":"Iniciado en la magia (clérigo)"},{"nombre":"Animador","caracteristicas":["Fuerza","Destreza","Carisma"],"dote":"Músico"},{"nombre":"Artesano","caracteristicas":["Fuerza","Destreza","Inteligencia"],"dote":"Fabricante"},{"nombre":"Campesino","caracteristicas":["Fuerza","Constitución","Sabiduría"],"dote":"Duro"},{"nombre":"Charlatán","caracteristicas":["Destreza","Constitución","Carisma"],"dote":"Habilidoso"},{"nombre":"Comerciante","caracteristicas":["Constitución","Inteligencia","Carisma"],"dote":"Afortunado"},{"nombre":"Criminal","caracteristicas":["Destreza","Constitución","Inteligencia"],"dote":"Alerta"},{"nombre":"Ermitaño","caracteristicas":["Constitución","Sabiduría","Carisma"],"dote":"Sanador"},{"nombre":"Erudito","caracteristicas":["Constitución","Inteligencia","Sabiduría"],"dote":"Iniciado en la magia (mago)"},{"nombre":"Escriba","caracteristicas":["Destreza","Inteligencia","Sabiduría"],"dote":"Habilidoso"},{"nombre":"Guardia","caracteristicas":["Fuerza","Inteligencia","Sabiduría"],"dote":"Alerta"},{"nombre":"Guía","caracteristicas":["Destreza","Constitución","Sabiduría"],"dote":"Iniciado en la magia (druida)"},{"nombre":"Marinero","caracteristicas":["Fuerza","Destreza","Sabiduría"],"dote":"Matón de taberna"},{"nombre":"Noble","caracteristicas":["Fuerza","Inteligencia","Carisma"],"dote":"Habilidoso"},{"nombre":"Soldado","caracteristicas":["Fuerza","Destreza","Constitución"],"dote":"Atacante salvaje"},{"nombre":"Vagabundo","caracteristicas":["Destreza","Sabiduría","Carisma"],"dote":"Afortunado"}],"dotes":{"_nota":"nivel = nivel de personaje mínimo. 'variantes' = la dote se elige con una opción, que forma parte del nombre: 'Iniciado en la magia (clérigo)'. 'repetible' = se puede elegir varias veces. Los requisitos de característica o de rasgo no se recogen aquí.","origen":[{"nombre":"Afortunado"},{"nombre":"Alerta"},{"nombre":"Atacante salvaje"},{"nombre":"Duro"},{"nombre":"Fabricante"},{"nombre":"Habilidoso","repetible":true},{"nombre":"Iniciado en la magia","repetible":true,"variantes":["clérigo","druida","mago"]},{"nombre":"Matón de taberna"},{"nombre":"Músico"},{"nombre":"Sanador"}],"general":{"nivel":4,"lista":[{"nombre":"Acechador"},{"nombre":"Actor"},{"nombre":"Apresador"},{"nombre":"Atacante a la carga"},{"nombre":"Atleta"},{"nombre":"Azote de magos"},{"nombre":"Centinela"},{"nombre":"Chef"},{"nombre":"Combatiente con dos armas"},{"nombre":"Combatiente montado"},{"nombre":"Duelista defensivo"},{"nombre":"Entrenamiento con armas marciales"},{"nombre":"Envenenador"},{"nombre":"Experto en ballestas"},{"nombre":"Experto en habilidades"},{"nombre":"Influencia feérica"},{"nombre":"Influencia sombría"},{"nombre":"Lanzador en combate"},{"nombre":"Lanzador preciso"},{"nombre":"Lanzador ritual"},{"nombre":"Líder inspirador"},{"nombre":"Ligeramente acorazado"},{"nombre":"Maestro de armas"},{"nombre":"Maestro en armaduras medias"},{"nombre":"Maestro en armaduras pesadas"},{"nombre":"Maestro en armas de asta"},{"nombre":"Maestro en armas pesadas"},{"nombre":"Maestro en escudos"},{"nombre":"Mejora de característica","repetible":true},{"nombre":"Mente aguda"},{"nombre":"Moderadamente acorazado"},{"nombre":"Muy acorazado"},{"nombre":"Observador"},{"nombre":"Perforador"},{"nombre":"Rebanador"},{"nombre":"Resiliente"},{"nombre":"Resistente"},{"nombre":"Telepático"},{"nombre":"Telequinético"},{"nombre":"Tirador de primera"},{"nombre":"Triturador"},{"nombre":"Veloz"},{"nombre":"Versado en un elemento","repetible":true}]},"estilo_de_combate":{"_nota":"Requieren el rasgo Estilo de combate (de clase).","lista":[{"nombre":"Combate con armas a dos manos"},{"nombre":"Combate con armas arrojadizas"},{"nombre":"Combate con dos armas"},{"nombre":"Combate sin armas"},{"nombre":"Defensa"},{"nombre":"Duelo"},{"nombre":"Intercepción"},{"nombre":"Lucha a ciegas"},{"nombre":"Protección"},{"nombre":"Tiro con arco"}]},"don_epico":{"nivel":19,"lista":[{"nombre":"Don de la fortaleza"},{"nombre":"Don de la habilidad"},{"nombre":"Don de la pericia en combate"},{"nombre":"Don de la recuperación"},{"nombre":"Don de la resistencia a energías"},{"nombre":"Don de la velocidad"},{"nombre":"Don de la visión verdadera"},{"nombre":"Don del ataque imparable"},{"nombre":"Don del destino"},{"nombre":"Don del espíritu de la noche"},{"nombre":"Don del recuerdo de conjuros"},{"nombre":"Don del viaje dimensional"}]}}};
+const OTRO="\u0000otro";
+const OTIPOS=[["clase","Clase"],["subclase","Subclase"],["especie","Especie"],["linaje","Linaje"],["trasfondo","Trasfondo"],["dote","Dote"],["conjuro","Conjuro"]];
+const OMODOS=[["","Modo: por defecto"],["lista","Lista (el jugador la elige)"],["siempre","Siempre (se asigna sola)"],["forma","Forma salvaje (druida)"]];
+const CLASES=CATALOGO.clases.map(c=>c.nombre);
+const subclases=c=>(CATALOGO.clases.find(x=>x.nombre===c)||{}).subclases||[];
+const linajes=e=>(CATALOGO.especies.find(x=>x.nombre===e)||{}).linajes||[];
+const DOTES=(()=>{const D=CATALOGO.dotes,n=l=>l.flatMap(x=>x.variantes?x.variantes.map(v=>x.nombre+" ("+v+")"):[x.nombre]);
+  return[["Origen",n(D.origen)],["General (nivel 4+)",n(D.general.lista)],["Estilo de combate",n(D.estilo_de_combate.lista)],["Don épico (nivel 19+)",n(D.don_epico.lista)]]})();
+const limpio=s=>String(s||"").replace(/[;@!]/g,"").trim();  // esos signos separan las partes del formato
+// desplegable del catálogo con «Otro…», que abre una casilla de texto para contenido casero
+function pick(groups,value,onchange){
+  const w=document.createElement("span"),s=document.createElement("select"),t=document.createElement("input");
+  w.className="pk";t.placeholder="Escribe el nombre";s.append(new Option("—",""));
+  for(const[g,names]of groups){let p=s;if(g){p=document.createElement("optgroup");p.label=g;s.append(p)}for(const n of names)p.append(new Option(n,n))}
+  s.append(new Option("Otro…",OTRO));
+  value=(value||"").trim();
+  const hit=[...s.options].find(o=>o.value&&o.value!==OTRO&&o.value.toLowerCase()===value.toLowerCase());  // sin distinguir mayúsculas, con tildes
+  if(hit)s.value=hit.value;else if(value){s.value=OTRO;t.value=value}
+  if(!groups.length){s.value=OTRO;s.hidden=true}
+  const sync=()=>{t.hidden=s.value!==OTRO};sync();
+  s.onchange=()=>{sync();if(s.value===OTRO)t.focus();if(onchange)onchange()};
+  w.append(s,t);w.get=()=>limpio(s.value===OTRO?t.value:s.value);
+  return w;
+}
+function origParse(text){
+  return String(text||"").split(";").map(x=>x.trim()).filter(Boolean).map(x=>{
+    const m=x.match(/^([^:]+):(.*?)(?:@\s*(\d+))?(?:!\s*(\S+))?$/);
+    return m?{tipo:m[1].trim().toLowerCase(),nombre:m[2].trim(),nivel:m[3]||"",modo:(m[4]||"").toLowerCase()}:{tipo:"clase",nombre:x}});
+}
+function origRow(e){
+  e=e||{tipo:"clase"};
+  const r=document.createElement("div"),ty=document.createElement("select"),area=document.createElement("span"),nv=document.createElement("input"),md=document.createElement("select"),del=document.createElement("button");
+  r.className="orow";area.className="pa";
+  for(const[v,l]of OTIPOS)ty.append(new Option(l,v));
+  if(!OTIPOS.some(([v])=>v===e.tipo))ty.append(new Option(e.tipo,e.tipo));  // tipo desconocido: se conserva tal cual
+  ty.value=e.tipo;
+  nv.type="number";nv.min=1;nv.max=20;nv.className="nv";nv.placeholder="Nivel";nv.title="Nivel mínimo (en clase y subclase, nivel en esa clase)";nv.value=e.nivel||"";
+  md.className="md";for(const[v,l]of OMODOS)md.append(new Option(l,v));
+  if(e.modo&&!OMODOS.some(([v])=>v===e.modo))md.append(new Option(e.modo,e.modo));
+  md.value=e.modo||"";
+  del.type="button";del.className="sm";del.textContent="✕";del.title="Quitar este origen";del.onclick=()=>{r.remove();preview()};
+  let get;
+  const build=nombre=>{
+    area.innerHTML="";const tp=ty.value;nombre=nombre||"";
+    if(tp==="subclase"||tp==="linaje"){  // primero la clase (o la especie), luego la subclase (o el linaje)
+      const k=nombre.indexOf("/"),pa=k<0?nombre:nombre.slice(0,k),hi=k<0?"":nombre.slice(k+1);
+      const parents=tp==="subclase"?CLASES:CATALOGO.especies.filter(x=>x.linajes.length).map(x=>x.nombre);
+      let C=null;
+      const P=pick([[null,parents]],pa,()=>child(""));
+      const child=v=>{if(C)C.remove();const l=tp==="subclase"?subclases(P.get()):linajes(P.get());C=pick(l.length?[[null,l]]:[],v);area.append(C)};
+      area.append(P);child(hi);
+      get=()=>{const a=P.get(),b=C.get();return a&&b?a+"/"+b:""};
+    }else if(tp==="conjuro"){
+      const i=document.createElement("input");i.setAttribute("list","conjlist");i.placeholder="Nombre del conjuro";i.value=nombre;area.append(i);
+      get=()=>limpio(i.value);
+    }else{
+      const g=tp==="clase"?[[null,CLASES]]:tp==="especie"?[[null,CATALOGO.especies.map(x=>x.nombre)]]:tp==="trasfondo"?[[null,CATALOGO.trasfondos.map(x=>x.nombre)]]:tp==="dote"?DOTES:[];
+      const P=pick(g,nombre);area.append(P);get=P.get;
+    }
+  };
+  ty.onchange=()=>build("");build(e.nombre);
+  r.append(ty,area,nv,md,del);
+  r.entry=()=>{const n=get();if(!n)return"";const l=parseInt(nv.value,10);return ty.value+":"+n+(l>=1&&l<=20?"@"+l:"")+(md.value?"!"+md.value:"")};
+  return r;
+}
+function origEditor(value){
+  const box=document.createElement("div");box.className="orig";box.id="orig";
+  box.innerHTML='<h3>Orígenes <span class="hint">(opcional)</span></h3><p class="hint">A quién pertenece esta tarjeta, para que la app Hoja de personaje se la dé a cada jugador. <b>No sale en la tarjeta.</b> El nivel es el mínimo: en clase y subclase, nivel en esa clase; en lo demás, nivel del personaje.</p><div class="orows"></div>';
+  const rows=box.querySelector(".orows");
+  for(const e of origParse(value))rows.append(origRow(e));
+  const bar=document.createElement("div");bar.className="row";bar.style.margin="6px 0 0";
+  const mk=(txt,fn)=>{const b=document.createElement("button");b.type="button";b.className="sm";b.textContent=txt;b.onclick=fn;bar.append(b)};
+  mk("+ Añadir origen",()=>rows.append(origRow()));
+  if(cur==="conjuro")mk("Añadir las clases de «Clases»",()=>{  // crea una fila «clase» por cada clase escrita en el campo Clases
+    const have=new Set(origText().toLowerCase().split("; "));
+    for(const n of $("f_clases").value.split(/,|\sy\s/)){const t=n.trim();if(!t)continue;
+      const c=CLASES.find(k=>noAcc(k)===noAcc(t))||limpio(t);
+      if(!have.has(("clase:"+c).toLowerCase())){rows.append(origRow({tipo:"clase",nombre:c}));have.add(("clase:"+c).toLowerCase())}}
+    preview()});
+  box.append(bar);
+  const dl=document.createElement("datalist");dl.id="conjlist";  // sugerencias: los conjuros que ya hay en el mazo
+  [...new Set(deck.filter(c=>c.t==="conjuro").map(c=>c.d.nombre))].sort().forEach(n=>dl.append(new Option(n)));
+  box.append(dl);
+  return box;
+}
+const origText=()=>{const b=$("orig");return b?[...b.querySelectorAll(".orow")].map(r=>r.entry()).filter(Boolean).join("; "):""};
 function cmd(){const f=parseFloat($("fs").value)||7;
   $("cmd").textContent="python generar_tarjetas_DnD_2024_v15.py mazo.csv tarjetas.pdf"+($("sz").value?" "+$("sz").value:"")+" --letra "+f+" --letra-minima "+(parseFloat($("fm").value)||6)+($("rv").checked?" --reversos":"")}
 ["sz","fs","fm","rv"].forEach(i=>{$(i).addEventListener("input",()=>{cmd();preview()});$(i).addEventListener("change",()=>{cmd();preview()})});
@@ -608,7 +722,7 @@ $("pdf").onclick=()=>{
 };
 list();form();cmd();
 // ---- App instalable (PWA) ----
-const VERSION="1.3";  // súbela al cambiar la app, junto con CACHE en sw.js
+const VERSION="1.4";  // súbela al cambiar la app, junto con CACHE en sw.js
 $("ver").textContent="Versión "+VERSION+".";
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
 </script>
