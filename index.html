@@ -43,6 +43,11 @@ li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pvinfo{font-size:13px;margin:8px 0 0}
 #pvinfo .w{display:block;margin-top:4px;padding:4px 8px;border-radius:5px;background:var(--warnbg);color:var(--warn)}
 .pvtabs{display:flex;gap:6px;margin-bottom:8px}
+.desf{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;margin:6px 0 2px}
+.desf>span:first-child{flex-basis:100%}
+.desf label{flex-direction:row;align-items:center;gap:5px;font-size:13px;color:var(--ink);grid-column:auto}
+.desf input{width:64px}
+.desf.off{opacity:.5}
 #measure{position:absolute;left:-10000px;top:0;visibility:hidden}
 footer.aviso{padding:4px 20px 70px;color:var(--mut);font-size:11.5px;text-align:center}
 footer.aviso p{margin:4px auto;max-width:760px}
@@ -54,7 +59,7 @@ footer.aviso p{margin:4px auto;max-width:760px}
 .guia table{border-collapse:collapse;width:100%}
 .guia th,.guia td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
 .guia pre{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:6px 8px;white-space:pre-wrap;font-size:12px;margin:4px 0}
-.guia code{background:var(--card)}
+.guia code{background:var(--card);word-break:normal;overflow-wrap:anywhere}
 .guia .lista{list-style:disc;padding-left:18px}
 .guia .lista li{display:list-item;border:0;padding:2px 0}
 .guia .cl{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:3px}
@@ -155,6 +160,18 @@ Con éxito, la mitad del daño.</pre>
 <li><b>Barajas</b> (como la Baraja de muchas cosas): pon el mismo «Texto del reverso», tipo y color en todas sus cartas, para que los reversos sean idénticos.</li>
 <li><b>Aviso naranja:</b> la tarjeta no cabe con la letra normal. Acorta el texto si la quieres en tamaño póker.</li>
 </ul>
+<h3>Cartas que sirvan a cualquier jugador</h3>
+<p>Así, la misma carta vale para cualquier personaje y no hace falta imprimir una versión para cada uno:</p>
+<ul class="lista">
+<li><b>Clases del conjuro:</b> todas las que pueden lanzarlo según el manual, abreviadas para que quepan en la línea: Bár (bárbaro), Brd (bardo), Bru (brujo), Clé (clérigo), Dru (druida), Exp (explorador), Gue (guerrero), Hec (hechicero), Mag (mago), Mon (monje), Pal (paladín) y Píc (pícaro). Por ejemplo: <code>Brd, Clé, Dru, Mag</code>. El botón «Añadir las clases de «Clases»» entiende tanto las abreviaturas como los nombres enteros.</li>
+<li><b>Notas:</b> solo lo que vale para cualquiera que use la carta, como <code>Perfil: tarjeta «Espíritu celestial».</code> Lo de un personaje concreto («siempre preparado» por su juramento, por su linaje…) ya lo dice su carta de rasgo, especie o subclase.</li>
+<li><b>Nombres:</b> los del manual, sin adaptarlos al personaje: <code>Acólito</code>, <code>Elfo (alto elfo)</code>, <code>Habilidoso</code>.</li>
+</ul>
+<h3>Imprimir</h3>
+<ul class="lista">
+<li><b>Solo frentes:</b> desmarca «Con reverso» para imprimir a una cara, por ejemplo para tener las cartas en folios de consulta sin recortar.</li>
+<li><b>Reverso movido:</b> imprime primero una hoja de prueba a doble cara, al 100 % y volteando por el borde largo. Mírala a contraluz desde el frente: si el reverso se ha movido, mide cuánto y escríbelo debajo de «Con reverso». La app lo compensa y lo recuerda para la próxima vez.</li>
+</ul>
 <h3>Orígenes (para la app Hoja de personaje)</h3>
 <p>Al final del formulario puedes indicar a quién pertenece la tarjeta: una clase, subclase, especie, linaje, trasfondo, dote o conjuro. La app Hoja de personaje usa este dato para dar a cada jugador sus tarjetas al importar el mazo. <b>No cambia nada de la tarjeta</b>: ni la vista previa ni el PDF.</p>
 <ul class="lista">
@@ -174,6 +191,10 @@ Con éxito, la mitad del daño.</pre>
 <p id="pvinfo"></p>
 <div class="row"><button type="button" id="dpdf" class="pri">Descargar PDF</button><button type="button" id="png">Descargar imagen PNG</button><button type="button" id="pdf">Imprimir</button></div>
 <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="rv" checked style="width:auto"> Con reverso (en la segunda página del PDF)</label>
+<div class="desf" id="desf"><span>Si en tu imprenta el reverso sale movido, mira la hoja a contraluz <b>desde el frente</b> y escribe cuánto se ha movido; se compensa solo:</span>
+<label><input id="dx" type="text" value="0" inputmode="decimal"> mm a la derecha</label>
+<label><input id="dy" type="text" value="0" inputmode="decimal"> mm hacia arriba</label>
+<span class="hint">Negativo = a la izquierda o hacia abajo. Se guarda en este dispositivo.</span></div>
 <p class="hint">«Descargar PDF» guarda la tarjeta a tamaño real en una hoja A4. El reverso va en espejo, para imprimir a doble cara volteando por el borde largo. Imprímelo al 100 %, sin «ajustar a la página». La imagen PNG es de la cara que estás viendo, a 300 ppp.</p>
 <p class="hint">Si sale un aviso en naranja, la tarjeta no cabe con la letra normal: se reduce la letra (hasta 6 pt) o la tarjeta pasa a un tamaño mayor. Para que quede en tamaño póker, acorta el texto.</p>
 </section>
@@ -206,14 +227,14 @@ Con éxito, la mitad del daño.</pre>
 <script>
 // Cada campo: "columna|Etiqueta|tipo|opciones". Tipos: t texto, x corto, a texto largo, s lista.
 const RAR="Común,Poco común,Raro,Muy raro,Legendario,Artefacto";
-const SCH="Abjuración,Conjuración,Adivinación,Encantamiento,Evocación,Ilusión,Nigromancia,Transmutación";
+const SCH="Abjuración,Conjuración,Adivinación,Encantamiento,Evocación,Ilusionismo,Nigromancia,Transmutación";  // como en el Manual del Jugador 2024
 const REV="nombre_reverso|Texto del reverso en lugar del nombre (opcional; ponlo igual en todas las cartas de una baraja para no delatarlas)|t";
 const IMG="imagen|Imagen del reverso (nombre del archivo, en la misma carpeta que el CSV)|t";
 const ORIG="origenes|Orígenes|o";  // editor propio (ver más abajo); no se dibuja en la tarjeta
 const TYPES={
 criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
 objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
-conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hec, Mag… o Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
 regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]}
 };
 const def=k=>TYPES[k].f.map(s=>{const[a,b,c,d]=s.split("|");return{k:a,l:b,t:c,o:d?d.split(","):null}});
@@ -233,6 +254,8 @@ function form(data){
     if(x.t==="a"){i=document.createElement("textarea")}
     else if(x.t==="s"){i=document.createElement("select");i.append(new Option("—",""));for(const o of x.o){const[v,t]=o.includes(":")?o.split(":"):[o,o];i.append(new Option(t,v))}}
     else{i=document.createElement("input")}
+    // un valor que no está en la lista (p. ej. «Ilusión», de mazos antiguos) se añade, para no perderlo al guardar
+    if(x.t==="s"&&data[x.k]&&![...i.options].some(o=>o.value===data[x.k]))i.append(new Option(data[x.k],data[x.k]));
     i.id="f_"+x.k;i.value=data[x.k]||"";l.append(i);f.append(l);
   }
   const bar=document.createElement("div");bar.className="bar";
@@ -334,6 +357,8 @@ const OTRO="\u0000otro";
 const OTIPOS=[["clase","Clase"],["subclase","Subclase"],["especie","Especie"],["linaje","Linaje"],["trasfondo","Trasfondo"],["dote","Dote"],["conjuro","Conjuro"]];
 const OMODOS=[["","Modo: por defecto"],["lista","Lista (el jugador la elige)"],["siempre","Siempre (se asigna sola)"],["forma","Forma salvaje (druida)"]];
 const CLASES=CATALOGO.clases.map(c=>c.nombre);
+// abreviaturas que usan los mazos en «Clases» (Brd, Bru, Clé…), sin tildes ni mayúsculas
+const ABREV={bar:"Bárbaro",brd:"Bardo",bru:"Brujo",cle:"Clérigo",dru:"Druida",exp:"Explorador",gue:"Guerrero",hec:"Hechicero",mag:"Mago",mon:"Monje",pal:"Paladín",pic:"Pícaro"};
 const subclases=c=>(CATALOGO.clases.find(x=>x.nombre===c)||{}).subclases||[];
 const linajes=e=>(CATALOGO.especies.find(x=>x.nombre===e)||{}).linajes||[];
 const DOTES=(()=>{const D=CATALOGO.dotes,n=l=>l.flatMap(x=>x.variantes?x.variantes.map(v=>x.nombre+" ("+v+")"):[x.nombre]);
@@ -405,8 +430,8 @@ function origEditor(value){
   mk("+ Añadir origen",()=>rows.append(origRow()));
   if(cur==="conjuro")mk("Añadir las clases de «Clases»",()=>{  // crea una fila «clase» por cada clase escrita en el campo Clases
     const have=new Set(origText().toLowerCase().split("; "));
-    for(const n of $("f_clases").value.split(/,|\sy\s/)){const t=n.trim();if(!t)continue;
-      const c=CLASES.find(k=>noAcc(k)===noAcc(t))||limpio(t);
+    for(const n of $("f_clases").value.split(/,|\sy\s/)){const t=n.trim().replace(/\.$/,"");if(!t)continue;  // nombre entero o abreviado
+      const c=CLASES.find(k=>noAcc(k)===noAcc(t))||ABREV[noAcc(t)]||limpio(t);
       if(!have.has(("clase:"+c).toLowerCase())){rows.append(origRow({tipo:"clase",nombre:c}));have.add(("clase:"+c).toLowerCase())}}
     preview()});
   box.append(bar);
@@ -417,7 +442,9 @@ function origEditor(value){
 }
 const origText=()=>{const b=$("orig");return b?[...b.querySelectorAll(".orow")].map(r=>r.entry()).filter(Boolean).join("; "):""};
 function cmd(){const f=parseFloat($("fs").value)||7;
-  $("cmd").textContent="python generar_tarjetas_DnD_2024_v15.py mazo.csv tarjetas.pdf"+($("sz").value?" "+$("sz").value:"")+" --letra "+f+" --letra-minima "+(parseFloat($("fm").value)||6)+($("rv").checked?" --reversos":"")}
+  $("cmd").textContent="python generar_tarjetas_DnD_2024_v15.py mazo.csv tarjetas.pdf"+($("sz").value?" "+$("sz").value:"")+" --letra "+f+" --letra-minima "+(parseFloat($("fm").value)||6)+($("rv").checked?" --reversos":"")
+    // el script mide el desfase mirando la cara del reverso: X igual (ya compensado), Y con el signo cambiado
+    +(()=>{const{dx,dy}=desfase();return $("rv").checked&&(dx||dy)?" --desfase-reverso "+dx+","+(dy?-dy:0):""})()}
 ["sz","fs","fm","rv"].forEach(i=>{$(i).addEventListener("input",()=>{cmd();preview()});$(i).addEventListener("change",()=>{cmd();preview()})});
 
 // ===================================================================
@@ -690,6 +717,15 @@ async function cardCanvas(side){  // dibuja la tarjeta a 300 ppp en un canvas
     img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
   });
 }
+// Desfase del reverso: el usuario escribe lo que ve desde el frente (el reverso se fue X mm a la derecha e Y mm
+// hacia arriba). Al voltear la hoja por el borde largo, la derecha del frente es la izquierda del reverso: para
+// compensarlo, el reverso se dibuja X mm más a la derecha de su página e Y mm más abajo.
+const mmVal=id=>{const v=parseFloat($(id).value.replace(",",".").replace(/[^\d.+-]/g,""));return isFinite(v)?Math.max(-20,Math.min(20,v)):0};
+const desfase=()=>({dx:mmVal("dx"),dy:mmVal("dy")});
+try{const g=JSON.parse(localStorage.getItem("forja_desfase")||"{}");if(g.dx)$("dx").value=num(g.dx);if(g.dy)$("dy").value=num(g.dy)}catch(e){}
+const desfOn=()=>$("desf").classList.toggle("off",!$("rv").checked);desfOn();
+$("rv").addEventListener("change",desfOn);
+["dx","dy"].forEach(i=>$(i).addEventListener("change",()=>{try{localStorage.setItem("forja_desfase",JSON.stringify(desfase()))}catch(e){}if(typeof cmd==="function")cmd()}));
 const needName=()=>{if($("f_nombre").value.trim())return false;alert("Escribe al menos el nombre de la tarjeta.");return true};
 $("png").onclick=async()=>{
   if(needName())return;
@@ -706,10 +742,12 @@ $("dpdf").onclick=async()=>{  // PDF A4 con la tarjeta a tamaño real (jsPDF); s
     for(const side of sides){
       const{canvas,w,h,d}=await cardCanvas(side),land=w>190;name=baseName(d);
       if(!doc)doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:land?"l":"p",compress:true});else doc.addPage("a4",land?"l":"p");
-      const pw=land?297:210,x=side==="front"?10:pw-10-w;  // el reverso en espejo, como en la impresión
+      const pw=land?297:210,{dx,dy}=desfase();
+      // el reverso en espejo, como en la impresión, y movido para compensar el desfase de la imprenta
+      const x=side==="front"?10:pw-10-w+dx,y=side==="front"?10:10+dy;
       const flat=document.createElement("canvas");flat.width=canvas.width;flat.height=canvas.height;  // JPEG sobre blanco: pesa mucho menos que PNG
       const g=flat.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,flat.width,flat.height);g.drawImage(canvas,0,0);
-      doc.addImage(flat.toDataURL("image/jpeg",0.92),"JPEG",x,10,w,h);
+      doc.addImage(flat.toDataURL("image/jpeg",0.92),"JPEG",x,y,w,h);
     }
     await saveFile(name+".pdf",doc.output("blob"));
   }catch(e){alert("No se ha podido generar el PDF. Prueba con «Imprimir».")}
@@ -717,12 +755,14 @@ $("dpdf").onclick=async()=>{  // PDF A4 con la tarjeta a tamaño real (jsPDF); s
 $("pdf").onclick=()=>{
   if(needName())return;
   const pa=$("printarea");pa.innerHTML="";
-  for(const side of $("rv").checked?["front","back"]:["front"]){const{el}=cardFor(side),box=document.createElement("div");if(side==="back")box.className="rev";box.append(el);pa.append(box)}
+  for(const side of $("rv").checked?["front","back"]:["front"]){const{el}=cardFor(side),box=document.createElement("div");
+    if(side==="back"){box.className="rev";const{dx,dy}=desfase();if(dx||dy)box.style.transform="translate("+dx+"mm,"+dy+"mm)"}
+    box.append(el);pa.append(box)}
   print();
 };
 list();form();cmd();
 // ---- App instalable (PWA) ----
-const VERSION="1.4";  // súbela al cambiar la app, junto con CACHE en sw.js
+const VERSION="1.5";  // súbela al cambiar la app, junto con CACHE en sw.js
 $("ver").textContent="Versión "+VERSION+".";
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
 </script>

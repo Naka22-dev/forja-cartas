@@ -1,7 +1,7 @@
 // Guarda la app en el móvil para que funcione sin conexión.
 // Sirve siempre la copia guardada y, en segundo plano, descarga la versión nueva
 // (las actualizaciones se ven la siguiente vez que se abre la app).
-const CACHE = 'tarjetas-v5';
+const CACHE = 'tarjetas-v6';
 const ARCHIVOS = [
   './',
   'index.html',
