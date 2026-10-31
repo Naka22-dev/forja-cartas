@@ -106,6 +106,11 @@ footer.aviso p{margin:4px auto;max-width:760px}
 .back .ln{position:absolute;height:.5pt;background:#FDF6E8}
 .back svg,.back img{position:absolute}
 .back img{object-fit:cover;border:.9pt solid #FDF6E8}
+.back .marco{position:absolute;overflow:hidden;border:.9pt solid #FDF6E8;box-sizing:border-box;touch-action:none;cursor:grab}
+.back .marco img{object-fit:fill;border:0;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.encaje{border:1px dashed var(--line);border-radius:8px;padding:6px 10px;margin:6px 0}
+.encaje .zoom{flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--ink)}
+.encaje .zoom input{width:160px}
 /* Impresión de una sola tarjeta desde el navegador */
 #printarea{display:none}
 @media print{
@@ -170,6 +175,7 @@ Con éxito, la mitad del daño.</pre>
 <h3>Imprimir</h3>
 <ul class="lista">
 <li><b>Solo frentes:</b> desmarca «Con reverso» para imprimir a una cara, por ejemplo para tener las cartas en folios de consulta sin recortar.</li>
+<li><b>Imagen del reverso:</b> en «Imagen del reverso» va el nombre del archivo (que debe estar junto al CSV para el script). Para verla y encuadrarla, abre la vista previa del <b>Reverso</b> y pulsa «Ver la imagen del reverso…»: arrastra la imagen para moverla y usa el zoom. La imagen no se sube ni se guarda; el encuadre sí (campo «Encuadre», en el CSV). Las ilustraciones con fondo llenan el marco; las criaturas recortadas (PNG sin fondo) caben enteras sobre blanco. Para el PDF con imágenes usa el script v17.</li>
 <li><b>Reverso movido:</b> imprime primero una hoja de prueba a doble cara, al 100 % y volteando por el borde largo. Mírala a contraluz desde el frente: si el reverso se ha movido, mide cuánto y escríbelo debajo de «Con reverso». La app lo compensa y lo recuerda para la próxima vez.</li>
 </ul>
 <h3>Orígenes (para la app Hoja de personaje)</h3>
@@ -189,6 +195,16 @@ Con éxito, la mitad del daño.</pre>
 <div class="pvtabs"><button type="button" id="pvf" class="on">Frente</button><button type="button" id="pvb">Reverso</button><button type="button" id="goform" class="sm" style="margin-left:auto">↑ Volver al formulario</button></div>
 <div id="pv"></div>
 <p id="pvinfo"></p>
+<div class="encaje" id="encaje" hidden>
+<div class="row" style="margin:4px 0"><button type="button" id="verimg" class="sm">🖼 Ver la imagen del reverso…</button><span id="imgnom" class="hint"></span>
+<input type="file" id="fimg" accept="image/png,image/jpeg,image/webp" hidden></div>
+<div id="encctl" hidden>
+<p class="hint" style="margin:2px 0">Arrastra la imagen en la vista previa para moverla.</p>
+<label class="zoom">Zoom <input type="range" id="ezoom" min="1" max="4" step="0.05" value="1"> <span id="ezv">1</span></label>
+<button type="button" id="ereset" class="sm">Centrar de nuevo</button>
+</div>
+<p class="hint" style="margin:2px 0">La imagen solo se usa para verla aquí: no se sube ni se guarda. El encuadre sí se guarda en la tarjeta (y en el CSV, para el script).</p>
+</div>
 <div class="row"><button type="button" id="dpdf" class="pri">Descargar PDF</button><button type="button" id="png">Descargar imagen PNG</button><button type="button" id="pdf">Imprimir</button></div>
 <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="rv" checked style="width:auto"> Con reverso (en la segunda página del PDF)</label>
 <div class="desf" id="desf"><span>Si en tu imprenta el reverso sale movido, mira la hoja a contraluz <b>desde el frente</b> y escribe cuánto se ha movido; se compensa solo:</span>
@@ -230,12 +246,13 @@ const RAR="Común,Poco común,Raro,Muy raro,Legendario,Artefacto";
 const SCH="Abjuración,Conjuración,Adivinación,Encantamiento,Evocación,Ilusionismo,Nigromancia,Transmutación";  // como en el Manual del Jugador 2024
 const REV="nombre_reverso|Texto del reverso en lugar del nombre (opcional; ponlo igual en todas las cartas de una baraja para no delatarlas)|t";
 const IMG="imagen|Imagen del reverso (nombre del archivo, en la misma carpeta que el CSV)|t";
+const ENC="imagen_encuadre|Encuadre de la imagen del reverso (x, y, zoom: se ajusta en la vista previa)|t";
 const ORIG="origenes|Orígenes|o";  // editor propio (ver más abajo); no se dibuja en la tarjeta
 const TYPES={
-criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
-objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
-conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hec, Mag… o Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]},
-regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,"color|Color (#RRGGBB, opcional)|t",ORIG]}
+criatura:{n:"Criatura",f:["nombre|Nombre|t","categoria|Categoría|s|Monstruo,PNJ","tipo_tamano_alineamiento|Tipo, tamaño y alineamiento (monstruo)|t","rol_especie_actitud|Rol, especie y actitud (PNJ)|t","ca|CA|t","iniciativa_bonus|Iniciativa (bonif.)|t","iniciativa_valor|Iniciativa (valor)|t","puntos_golpe|Puntos de golpe|t","velocidad|Velocidad|t","fue|FUE|x","des|DES|x","con|CON|x","int|INT|x","sab|SAB|x","car|CAR|x","salvaciones|Salvaciones con competencia (ej. Des +5, Sab +3)|t","habilidades|Habilidades|t","vulnerabilidades|Vulnerabilidades|t","resistencias|Resistencias|t","inmunidades_dano|Inmunidades a daño|t","inmunidades_estado|Inmunidades a estados|t","equipo_armadura|Equipo / armadura|t","sentidos_percepcion_pasiva|Sentidos|t","idiomas|Idiomas|t","vd|VD|t","px|PX|t","bonificador_competencia|Bonif. de competencia|t","rasgos|Rasgos|a","acciones|Acciones|a","acciones_adicionales|Acciones adicionales|a","reacciones|Reacciones|a","acciones_legendarias|Acciones legendarias|a","notas|Notas|a",REV,IMG,ENC,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+objeto:{n:"Objeto",f:["nombre|Nombre|t","tipo|Tipo (Arma, Armadura, Poción…)|t","rareza|Rareza|s|"+RAR,"sintonizacion|Sintonización (Sí, o requisito)|t","coste|Coste|t","peso|Peso|t","dano|Daño|t","maestria|Maestría|t","ca_armadura|CA (armaduras)|t","requisito_fue|Fuerza requerida|t","sigilo|Sigilo|t","propiedades|Propiedades|t","cargas|Cargas|t","descripcion|Descripción|a","efectos|Efectos|a","maldicion|Maldición|a","notas|Notas|a",REV,IMG,ENC,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+conjuro:{n:"Conjuro",f:["nombre|Nombre|t","nivel|Nivel|s|0:Truco,1:Nivel 1,2:Nivel 2,3:Nivel 3,4:Nivel 4,5:Nivel 5,6:Nivel 6,7:Nivel 7,8:Nivel 8,9:Nivel 9","escuela|Escuela|s|"+SCH,"clases|Clases (Hec, Mag… o Hechicero, Mago…)|t","tiempo_lanzamiento|Tiempo de lanzamiento|t","alcance|Alcance|t","componentes|Componentes|t","duracion|Duración|t","descripcion|Descripción|a","niveles_superiores|Niveles superiores / mejora de truco|a","notas|Notas|a",REV,IMG,ENC,"color|Color (#RRGGBB, opcional)|t",ORIG]},
+regla:{n:"Regla",f:["nombre|Nombre|t","tipo|Tipo (Talento, Condición, Rasgo de clase…)|t","requisito|Requisito|t","datos|Datos en banda (una línea por dato)|a","descripcion|Descripción|a","seccion1_titulo|Sección 1: título|t","seccion1_texto|Sección 1: texto|a","seccion2_titulo|Sección 2: título|t","seccion2_texto|Sección 2: texto|a","seccion3_titulo|Sección 3: título|t","seccion3_texto|Sección 3: texto|a","seccion4_titulo|Sección 4: título|t","seccion4_texto|Sección 4: texto|a","notas|Notas|a",REV,IMG,ENC,"color|Color (#RRGGBB, opcional)|t",ORIG]}
 };
 const def=k=>TYPES[k].f.map(s=>{const[a,b,c,d]=s.split("|");return{k:a,l:b,t:c,o:d?d.split(","):null}});
 let cur="criatura",edit=null,deck=[];
@@ -647,10 +664,92 @@ function backCard(t,d,w,h){
     const lines=segs.map(([a,b])=>'<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>').join("");
     x+='<svg class="emb" viewBox="0 0 '+w+" "+h+'" style="left:0;top:0;width:'+w+'mm;height:'+h+'mm"><g fill="none" stroke="'+CREAM+'" stroke-width="'+lw+'" stroke-linejoin="round">'+poly(hx)+poly(tr)+lines+"</g>"+
       (lv!==""?'<text x="'+cx+'" y="'+(cy+r*0.2)+'" text-anchor="middle" fill="'+CREAM+'" font-family="Helvetica,Arial,sans-serif" font-weight="bold" font-size="'+r*0.6+'">'+lv+"</text>":"")+"</svg>";
-    if(d.imagen){x+='<img alt="" src="'+H(d.imagen)+'" style="left:'+pad+'mm;top:'+topMid+'mm;width:'+inner+'mm;height:'+mh+'mm;background:'+acc+'" onerror="this.remove()">'}
+    const loc=d.imagen&&imgLocal[baseImg(d.imagen)];
+    if(loc){  // la imagen elegida en este dispositivo: con el encuadre, igual que la coloca el script v17
+      const g=encaje(inner,mh,loc,d.imagen_encuadre);
+      x+='<div class="marco" style="left:'+pad+'mm;top:'+topMid+'mm;width:'+inner+'mm;height:'+mh+'mm;background:'+(loc.recorte?"#fff":acc)+'">'+
+        '<img alt="" src="'+loc.url+'" style="left:'+g.left+'mm;top:'+g.top+'mm;width:'+g.w+'mm;height:'+g.h+'mm"></div>';
+    }
+    else if(d.imagen){x+='<img alt="" src="'+H(d.imagen)+'" style="left:'+pad+'mm;top:'+topMid+'mm;width:'+inner+'mm;height:'+mh+'mm;background:'+acc+'" onerror="this.remove()">'}
   }
-  el.innerHTML=x;el._emblem=emblem;return{el,vert};
+  el.innerHTML=x;el._emblem=emblem;el._marco={w:inner,h:mh};return{el,vert};
 }
+// ---- Imagen del reverso: verla y encuadrarla (v1.6) ----
+// imgLocal[nombre] = {url, w, h, bb:[x0,y0,x1,y1] (silueta si es recorte), recorte}. Solo en memoria: no se guarda.
+const imgLocal={};
+const baseImg=s=>String(s||"").split(/[\\/]/).pop().trim().toLowerCase();
+function leerEncuadre(s){
+  let t=String(s||"").replace(/, /g," ").trim().split(/[;\s]+/).filter(Boolean);
+  if(t.length===1&&t[0].includes(","))t=t[0].split(",");  // «50,30,1.2» sin espacios
+  const n=t.map(v=>parseFloat(v.replace(",","."))).filter(v=>isFinite(v));  // igual que _encaje() del script v17
+  return{x:n.length>1?Math.min(100,Math.max(0,n[0]))/100:0.5,y:n.length>1?Math.min(100,Math.max(0,n[1]))/100:0.5,z:n.length>2?Math.min(4,Math.max(1,n[2])):1};
+}
+const textoEncuadre=e=>Math.round(e.x*100)+", "+Math.round(e.y*100)+", "+(+e.z.toFixed(2));
+// Dónde va la imagen dentro del marco (mm, relativo al marco). Igual que _encaje() en el script v17:
+// con fondo, rellena el marco (cover); recortada, cabe entera al 94 % (contain). El zoom multiplica la escala y el
+// punto (x, y) de la imagen (% de su silueta) va al centro del marco, sin dejar huecos ni salirse del marco.
+function encaje(fw,fh,loc,txt){
+  const e=leerEncuadre(txt),[x0,y0,x1,y1]=loc.bb,bw=x1-x0,bh=y1-y0;
+  const s=(loc.recorte?Math.min(fw/bw,fh/bh)*0.94:Math.max(fw/bw,fh/bh))*e.z,sw=bw*s,sh=bh*s;
+  const lim=(v,tam,marco)=>tam>=marco?Math.min(0,Math.max(marco-tam,v)):Math.max(0,Math.min(marco-tam,v));
+  const bl=lim(fw/2-e.x*sw,sw,fw),bt=lim(fh/2-e.y*sh,sh,fh);
+  return{left:bl-x0*s,top:bt-y0*s,w:loc.w*s,h:loc.h*s,s,sw,sh};
+}
+// Recorte o con fondo, con el mismo criterio que el script: más del 9 % transparente en el interior.
+async function analizarImagen(file){
+  const url=URL.createObjectURL(file),im=new Image();im.src=url;await im.decode();
+  const W=im.naturalWidth,Hh=im.naturalHeight,k=Math.min(1,400/Math.max(W,Hh)),cw=Math.max(1,Math.round(W*k)),ch=Math.max(1,Math.round(Hh*k));
+  const cv=document.createElement("canvas");cv.width=cw;cv.height=ch;const g=cv.getContext("2d");g.drawImage(im,0,0,cw,ch);
+  const a=g.getImageData(0,0,cw,ch).data;let min=255,tr=0,tot=0,bx0=cw,by0=ch,bx1=-1,by1=-1;
+  const dx=Math.floor(cw*0.12),dy=Math.floor(ch*0.12);
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const v=a[(y*cw+x)*4+3];if(v<min)min=v;
+    if(v>128){if(x<bx0)bx0=x;if(y<by0)by0=y;if(x>bx1)bx1=x;if(y>by1)by1=y}
+    if(x>=dx&&x<cw-dx&&y>=dy&&y<ch-dy){tot++;if(v<128)tr++}}
+  const recorte=min<250&&tot>0&&tr/tot>=0.09&&bx1>=0;
+  const bb=recorte?[bx0/k,by0/k,(bx1+1)/k,(by1+1)/k]:[0,0,W,Hh];
+  return{url,w:W,h:Hh,bb,recorte};
+}
+function mostrarEncaje(){
+  const d=$("f_nombre")?formData():{},hay=pvSide==="back"&&$("f_imagen")!==null;
+  $("encaje").hidden=!hay;if(!hay)return;
+  const loc=d.imagen&&imgLocal[baseImg(d.imagen)];
+  $("imgnom").textContent=loc?"Viendo «"+d.imagen+"»"+(loc.recorte?" (recortada: cabe entera, sobre blanco)":""):(d.imagen?"«"+d.imagen+"»: elígela para verla aquí":"");
+  $("encctl").hidden=!loc;
+  if(loc){const e=leerEncuadre(d.imagen_encuadre);$("ezoom").value=e.z;$("ezv").textContent=num(+e.z.toFixed(2))}
+}
+$("verimg").onclick=()=>$("fimg").click();
+$("fimg").onchange=async()=>{
+  const f=$("fimg").files[0];if(!f)return;
+  try{const loc=await analizarImagen(f);
+    if(!$("f_imagen").value.trim())$("f_imagen").value=f.name;  // sin nombre, se pone el del archivo elegido
+    else if(baseImg($("f_imagen").value)!==baseImg(f.name)&&!confirm("La tarjeta dice «"+$("f_imagen").value+"» y has elegido «"+f.name+"». ¿Cambiar el nombre al del archivo elegido?")){imgLocal[baseImg($("f_imagen").value)]=loc;preview();return}
+    else $("f_imagen").value=f.name;
+    imgLocal[baseImg(f.name)]=loc;preview();
+  }catch(e){alert("No se ha podido abrir la imagen.")}
+  $("fimg").value="";
+};
+const ponerEncuadre=e=>{$("f_imagen_encuadre").value=(e.x===0.5&&e.y===0.5&&e.z===1)?"":textoEncuadre(e);preview()};
+$("ezoom").oninput=()=>{const e=leerEncuadre($("f_imagen_encuadre").value);e.z=+$("ezoom").value;ponerEncuadre(e)};
+$("ereset").onclick=()=>ponerEncuadre({x:0.5,y:0.5,z:1});
+// Arrastrar la imagen dentro del marco de la vista previa
+let arrastre=null;
+$("pv").addEventListener("pointerdown",ev=>{
+  const m=ev.target.closest(".marco");if(!m)return;
+  const d=formData(),loc=imgLocal[baseImg(d.imagen)];if(!loc)return;
+  const card=m.closest(".back"),k=card.getBoundingClientRect().width/(card.offsetWidth||1);  // escala de la vista previa
+  const fr=card._marco,g=encaje(fr.w,fr.h,loc,d.imagen_encuadre),e=leerEncuadre(d.imagen_encuadre);
+  // el punto que se ve de verdad en el centro (si el encuadre estaba limitado por los bordes), para no arrastrar «en vacío»
+  e.x=(fr.w/2-(g.left+loc.bb[0]*g.s))/g.sw;e.y=(fr.h/2-(g.top+loc.bb[1]*g.s))/g.sh;
+  arrastre={x0:ev.clientX,y0:ev.clientY,e,pxmm:MM*k,sw:g.sw,sh:g.sh};
+  m.setPointerCapture(ev.pointerId);ev.preventDefault();
+});
+$("pv").addEventListener("pointermove",ev=>{
+  if(!arrastre)return;const a=arrastre;
+  const dxmm=(ev.clientX-a.x0)/a.pxmm,dymm=(ev.clientY-a.y0)/a.pxmm;
+  const e={x:Math.min(1,Math.max(0,a.e.x-dxmm/a.sw)),y:Math.min(1,Math.max(0,a.e.y-dymm/a.sh)),z:a.e.z};
+  $("f_imagen_encuadre").value=textoEncuadre(e);clearTimeout(pvTimer);pvTimer=setTimeout(preview,16);
+});
+["pointerup","pointercancel"].forEach(t=>$("pv").addEventListener(t,()=>{arrastre=null}));
 // Dibuja el d20 directamente en el canvas (Android pinta mal los SVG dentro de html2canvas: salían grises)
 function drawEmblem(g,e,pxmm){
   const P=([x,y])=>[x*pxmm,y*pxmm];
@@ -684,6 +783,7 @@ function preview(){
   else{if(r.si>0)x+='<span class="w">No cabe en '+num(LADDER[t==="criatura"?"criatura":"otros"][0].join(" × "))+' mm: sale en un tamaño mayor.</span>';
     if(r.fs<f0-1e-9)x+='<span class="w">Letra reducida a '+num(r.fs)+' pt para que quepa.</span>'}
   info.innerHTML=x;
+  mostrarEncaje();
 }
 window.addEventListener("resize",()=>{clearTimeout(pvTimer);pvTimer=setTimeout(preview,150)});
 // ---- Descarga directa desde el navegador (casos sueltos; el PDF bueno sigue siendo el del script) ----
@@ -696,9 +796,11 @@ const baseName=d=>(d.nombre||"tarjeta").normalize("NFD").replace(/[̀-ͯ]/g,"").
 async function cardCanvas(side){  // dibuja la tarjeta a 300 ppp en un canvas
   if(window.html2canvas){  // fiable también en navegadores de móvil
     const{el,w,h,d}=cardFor(side),host=document.createElement("div");
-    el.querySelectorAll("img").forEach(i=>i.remove());  // una imagen externa no se puede incrustar: se ve el d20
+    // una imagen externa no se puede incrustar (se ve el d20); la elegida en este dispositivo (blob:) sí
+    el.querySelectorAll("img").forEach(i=>{if(!i.src.startsWith("blob:"))i.remove()});
     host.style.cssText="position:absolute;left:-10000px;top:0";host.append(el);document.body.append(host);
-    const emb=el._emblem,svg=el.querySelector("svg.emb");
+    const conImg=!!el.querySelector(".marco"),emb=conImg?null:el._emblem,svg=el.querySelector("svg.emb");
+    if(conImg&&svg)svg.remove();
     if(emb&&svg)svg.style.visibility="hidden";  // el d20 se dibuja después, a mano
     try{const canvas=await window.html2canvas(el,{scale:300/96,backgroundColor:"#ffffff",logging:false});
       if(emb&&svg)drawEmblem(canvas.getContext("2d"),emb,canvas.width/w);
@@ -707,7 +809,8 @@ async function cardCanvas(side){  // dibuja la tarjeta a 300 ppp en un canvas
   }
   return new Promise((ok,fail)=>{  // sin conexión: SVG con el HTML dentro (va bien en escritorio)
     const{el,w,h,d}=cardFor(side),k=300/96;
-    el.querySelectorAll("img").forEach(i=>i.remove());
+    el.querySelectorAll("img").forEach(i=>i.remove());  // en este modo ninguna imagen se puede incrustar
+    el.querySelectorAll(".marco").forEach(m=>m.remove());
     el.style.transform="scale("+k+")";
     const css=document.querySelector("style").textContent,W=Math.round(w*MM*k),Hh=Math.round(h*MM*k);
     const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+Hh+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>'+css+"</style>"+new XMLSerializer().serializeToString(el)+"</div></foreignObject></svg>";
@@ -762,7 +865,7 @@ $("pdf").onclick=()=>{
 };
 list();form();cmd();
 // ---- App instalable (PWA) ----
-const VERSION="1.5";  // súbela al cambiar la app, junto con CACHE en sw.js
+const VERSION="1.6";  // súbela al cambiar la app, junto con CACHE en sw.js
 $("ver").textContent="Versión "+VERSION+".";
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
 </script>
